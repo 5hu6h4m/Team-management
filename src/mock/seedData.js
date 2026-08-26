@@ -19,7 +19,7 @@ export const INITIAL_USERS = [
     department: 'Executive',
     branch: 'Computer Engineering',
     year: '4th Year (BE)',
-    accessKey: 'shubham123',
+    accessKey: 'shubham8686@#',
     phone: '+91 98765 43210',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
     status: 'active',

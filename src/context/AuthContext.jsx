@@ -5,7 +5,7 @@ import { api } from '../services/api';
 
 const AuthContext = createContext();
 
-const STORAGE_KEY = 'ecell_users_v3';
+const STORAGE_KEY = 'ecell_users_v4';
 
 export function AuthProvider({ children }) {
   const [users, setUsers] = useState(() => {
@@ -18,7 +18,7 @@ export function AuthProvider({ children }) {
       const found = loadFromStorage(STORAGE_KEY, INITIAL_USERS).find(u => u.id === saved);
       return found || null;
     }
-    return null; // Always show clean professional login screen first
+    return null; // Always show clean login screen first
   });
 
   // Keep storage synced
@@ -47,14 +47,14 @@ export function AuthProvider({ children }) {
     }).catch(() => {});
   }, []);
 
-  // Professional Gmail + Password/Key login
+  // Standard secure login
   const login = (emailOrGmail, enteredPassword) => {
     if (!emailOrGmail || !emailOrGmail.trim()) {
-      return { success: false, message: 'Please enter your registered Gmail or Email address.' };
+      return { success: false, message: 'Please enter your registered Email address.' };
     }
 
     if (!enteredPassword || !enteredPassword.trim()) {
-      return { success: false, message: 'Please enter your access password / key.' };
+      return { success: false, message: 'Please enter your password.' };
     }
 
     const query = emailOrGmail.trim().toLowerCase();
@@ -67,7 +67,7 @@ export function AuthProvider({ children }) {
     if (!found) {
       return { 
         success: false, 
-        message: 'No account found with this Gmail/Email. Please contact E-Cell President to register your profile.' 
+        message: 'No account found with this email. Please contact the E-Cell President.' 
       };
     }
 
@@ -78,11 +78,11 @@ export function AuthProvider({ children }) {
       };
     }
 
-    const expectedKey = found.accessKey || 'shubham123';
+    const expectedKey = found.accessKey || 'shubham8686@#';
     if (expectedKey !== enteredPassword.trim()) {
       return { 
         success: false, 
-        message: 'Incorrect Access Password / Key. Please verify with President.' 
+        message: 'Incorrect Password. Please check your credentials.' 
       };
     }
 
