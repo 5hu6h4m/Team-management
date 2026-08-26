@@ -5,15 +5,18 @@ import { useAuth } from './AuthContext';
 import { getDeadlineStatus } from '../utils/deadlineHelper';
 import confetti from 'canvas-confetti';
 
+const STORAGE_TASKS_KEY = 'ecell_tasks_v3';
+const STORAGE_DEPTS_KEY = 'ecell_departments_v3';
+
 const TaskContext = createContext();
 
 export function TaskProvider({ children }) {
   const { currentUser, users } = useAuth();
-  const [tasks, setTasks] = useState(() => loadFromStorage('tasks', INITIAL_TASKS));
-  const [departments, setDepartments] = useState(() => loadFromStorage('departments', INITIAL_DEPARTMENTS));
+  const [tasks, setTasks] = useState(() => loadFromStorage(STORAGE_TASKS_KEY, INITIAL_TASKS));
+  const [departments, setDepartments] = useState(() => loadFromStorage(STORAGE_DEPTS_KEY, INITIAL_DEPARTMENTS));
 
   useEffect(() => {
-    saveToStorage('tasks', tasks);
+    saveToStorage(STORAGE_TASKS_KEY, tasks);
   }, [tasks]);
 
   useEffect(() => {

@@ -2,326 +2,172 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Avatar } from '../components/common/Avatar';
 import { 
-  Key, 
-  User, 
-  Shield, 
-  Briefcase, 
-  Users, 
+  Mail, 
+  Lock, 
   ArrowRight, 
-  GraduationCap, 
-  Layers, 
-  Lock,
-  ChevronDown
+  ShieldCheck, 
+  UserCheck, 
+  KeyRound,
+  Sparkles
 } from 'lucide-react';
 
 export function LoginPage({ onLoginSuccess }) {
   const { users, login, setCurrentUser } = useAuth();
 
-  // Tab: 'form' (Name/Key Login) or 'quick' (1-Click Grid)
-  const [loginMode, setLoginMode] = useState('form');
-
-  // Form State
-  const [selectedRole, setSelectedRole] = useState('ALL');
-  const [selectedUserId, setSelectedUserId] = useState('');
-  const [enteredNameOrEmail, setEnteredNameOrEmail] = useState('');
+  const [email, setEmail] = useState('');
   const [accessKey, setAccessKey] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const filteredRoleUsers = users.filter(u => {
-    if (selectedRole === 'ALL') return true;
-    return u.role === selectedRole;
-  });
+  const presidentUser = users.find(u => u.role === 'President') || users[0];
 
-  const selectedMemberData = users.find(u => u.id === selectedUserId);
-
-  const handleFormLogin = (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     setError('');
 
-    const identifier = selectedUserId 
-      ? (selectedMemberData?.email || selectedMemberData?.name)
-      : enteredNameOrEmail;
-
-    if (!identifier) {
-      setError('Please select your member profile or enter your name/email.');
+    if (!email.trim()) {
+      setError('Please enter your registered Gmail or Email address.');
       return;
     }
 
-    const res = login(identifier, accessKey);
-    if (res.success) {
+    if (!accessKey.trim()) {
+      setError('Please enter your President-issued Access Password / Key.');
+      return;
+    }
+
+    setLoading(true);
+    setTimeout(() => {
+      const res = login(email.trim(), accessKey.trim());
+      setLoading(false);
+
+      if (res.success) {
+        if (onLoginSuccess) onLoginSuccess();
+      } else {
+        setError(res.message);
+      }
+    }, 200);
+  };
+
+  const handlePresidentFastLogin = () => {
+    if (presidentUser) {
+      setCurrentUser(presidentUser);
       if (onLoginSuccess) onLoginSuccess();
-    } else {
-      setError(res.message);
     }
   };
 
-  const handleQuickLogin = (user) => {
-    setCurrentUser(user);
-    if (onLoginSuccess) onLoginSuccess();
-  };
-
   return (
-    <div className="min-h-screen bg-[#080808] flex items-center justify-center p-4 sm:p-6">
-      <div className="w-full max-w-2xl bg-[#111111] border border-[#252525] rounded-2xl p-6 sm:p-8 space-y-6 shadow-2xl">
+    <div className="min-h-screen bg-[#080808] flex items-center justify-center p-4 sm:p-6 font-sans">
+      <div className="w-full max-w-md bg-[#111111] border border-[#222226] rounded-2xl p-6 sm:p-8 space-y-6 shadow-2xl">
         
         {/* Brand Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#222226] pb-4">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="px-2 py-0.5 text-[9px] font-extrabold uppercase bg-[#B11226] text-white rounded">
-                Official Access Portal
-              </span>
-            </div>
-            <h1 className="text-xl font-bold text-white tracking-tight">
-              E-Cell MET <span className="text-zinc-500 font-normal">/ TaskHub</span>
-            </h1>
-            <p className="text-xs text-zinc-400 mt-0.5">
-              Sign in with your assigned team profile & access key
-            </p>
+        <div className="text-center space-y-1.5 border-b border-[#222226] pb-5">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#1c1213] border border-[#3b171a] text-red-400 text-[10px] font-bold uppercase tracking-widest mb-1">
+            <ShieldCheck className="w-3 h-3" />
+            E-Cell MET Internal OS
           </div>
-
-          {/* Mode Switcher */}
-          <div className="flex items-center gap-1 bg-[#181818] p-1 rounded-lg border border-[#252525] self-start sm:self-auto">
-            <button
-              type="button"
-              onClick={() => { setLoginMode('form'); setError(''); }}
-              className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${
-                loginMode === 'form' ? 'bg-[#252525] text-white' : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              Key Login
-            </button>
-            <button
-              type="button"
-              onClick={() => { setLoginMode('quick'); setError(''); }}
-              className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${
-                loginMode === 'quick' ? 'bg-[#252525] text-white' : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              1-Click Roster ({users.length})
-            </button>
-          </div>
+          
+          <h1 className="text-xl font-bold text-white tracking-tight">
+            TASKHUB PORTAL
+          </h1>
+          <p className="text-xs text-zinc-400">
+            Sign in with your registered Gmail & President Access Key
+          </p>
         </div>
 
         {error && (
-          <div className="p-3 rounded-lg bg-red-950/40 border border-red-800/60 text-red-300 text-xs font-medium">
+          <div className="p-3 rounded-xl bg-red-950/40 border border-red-800/60 text-red-300 text-xs font-medium leading-relaxed">
             {error}
           </div>
         )}
 
-        {/* ---------------------------------------------------- */}
-        {/* MODE A: NAME + POSITION + ACCESS KEY LOGIN FORM */}
-        {/* ---------------------------------------------------- */}
-        {loginMode === 'form' && (
-          <form onSubmit={handleFormLogin} className="space-y-4">
-            
-            {/* Rank / Role Filter Dropdown */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1">
-                  1. Filter by Rank / Role
-                </label>
-                <div className="relative">
-                  <select
-                    value={selectedRole}
-                    onChange={(e) => {
-                      setSelectedRole(e.target.value);
-                      setSelectedUserId('');
-                    }}
-                    className="w-full px-3 py-2 text-xs bg-[#181818] border border-[#252525] rounded-lg text-white font-semibold focus:outline-none focus:border-zinc-500"
-                  >
-                    <option value="ALL">All Roles</option>
-                    <option value="President">President</option>
-                    <option value="GS">General Secretary (GS)</option>
-                    <option value="Lead">Department Lead</option>
-                    <option value="Member">Team Member</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1">
-                  2. Select Member Profile
-                </label>
-                <select
-                  value={selectedUserId}
-                  onChange={(e) => {
-                    setSelectedUserId(e.target.value);
-                    const found = users.find(u => u.id === e.target.value);
-                    if (found) {
-                      setAccessKey(found.accessKey || '');
-                    }
-                  }}
-                  className="w-full px-3 py-2 text-xs bg-[#181818] border border-[#252525] rounded-lg text-white focus:outline-none focus:border-zinc-500"
-                >
-                  <option value="">-- Choose Member --</option>
-                  {filteredRoleUsers.map(u => (
-                    <option key={u.id} value={u.id}>
-                      {u.name} ({u.role} - {u.department})
-                    </option>
-                  ))}
-                </select>
-              </div>
+        {/* Professional Login Form */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          
+          {/* Gmail / Email Input */}
+          <div>
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-300 mb-1.5">
+              Gmail / Institutional Email
+            </label>
+            <div className="relative">
+              <Mail className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="email"
+                required
+                placeholder="yourname@gmail.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full pl-10 pr-3.5 py-2.5 text-xs bg-[#161616] border border-[#262626] rounded-xl text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-500 transition-colors"
+              />
             </div>
+          </div>
 
-            {/* Member Details Live Preview (Branch, Year, Team, Position) */}
-            {selectedMemberData && (
-              <div className="p-3.5 bg-[#161616] rounded-xl border border-[#282828] flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <Avatar user={selectedMemberData} size="md" />
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-white truncate">{selectedMemberData.name}</p>
-                    <p className="text-[11px] text-zinc-400">
-                      <strong>{selectedMemberData.role}</strong> • {selectedMemberData.department} Team
-                    </p>
-                    <p className="text-[10px] text-zinc-500 flex items-center gap-1.5 mt-0.5">
-                      <GraduationCap className="w-3 h-3 text-red-400" />
-                      <span>{selectedMemberData.branch || 'Engineering'} ({selectedMemberData.year || 'SE'})</span>
-                    </p>
-                  </div>
-                </div>
-
-                <span className="px-2 py-1 bg-zinc-800 text-zinc-300 text-[10px] font-mono rounded border border-zinc-700">
-                  Key: {selectedMemberData.accessKey}
-                </span>
-              </div>
-            )}
-
-            {/* Manual Email fallback if not choosing from dropdown */}
-            {!selectedUserId && (
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1">
-                  Or Type Name / Email
-                </label>
-                <div className="relative">
-                  <User className="w-3.5 h-3.5 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    placeholder="e.g. Shubham, president@ecell.org or Anshu"
-                    value={enteredNameOrEmail}
-                    onChange={(e) => setEnteredNameOrEmail(e.target.value)}
-                    className="w-full pl-8 pr-3 py-2 text-xs bg-[#181818] border border-[#252525] rounded-lg text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-500"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Access Key / Password */}
-            <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1">
-                Access Key / Password
+          {/* Access Key / Password Input */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-300">
+                Access Password / Key
               </label>
-              <div className="relative">
-                <Key className="w-3.5 h-3.5 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="Enter assigned key (e.g. shubham123, anshu123)"
-                  value={accessKey}
-                  onChange={(e) => setAccessKey(e.target.value)}
-                  className="w-full pl-8 pr-3 py-2 text-xs bg-[#181818] border border-[#252525] rounded-lg text-white font-mono placeholder-zinc-600 focus:outline-none focus:border-zinc-500"
-                />
-              </div>
+              <span className="text-[10px] text-zinc-500">Issued by President</span>
+            </div>
+            <div className="relative">
+              <KeyRound className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="password"
+                required
+                placeholder="Enter your security access key"
+                value={accessKey}
+                onChange={(e) => setAccessKey(e.target.value)}
+                className="w-full pl-10 pr-3.5 py-2.5 text-xs bg-[#161616] border border-[#262626] rounded-xl text-white font-mono placeholder-zinc-600 focus:outline-none focus:border-zinc-500 transition-colors"
+              />
+            </div>
+          </div>
+
+          {/* Sign In Button */}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-2.5 bg-[#B11226] hover:bg-[#D61F36] disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-sm transition-all flex items-center justify-center gap-2"
+          >
+            <span>{loading ? 'Authenticating...' : 'Sign In to Workspace'}</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+
+        </form>
+
+        {/* President Instant Access Card */}
+        {presidentUser && (
+          <div className="pt-4 border-t border-[#222226] space-y-2">
+            <div className="flex items-center justify-between text-[10px] text-zinc-500 uppercase font-bold tracking-wider">
+              <span>Admin Account</span>
+              <span className="text-emerald-400">1-Click Authorized</span>
             </div>
 
             <button
-              type="submit"
-              className="w-full py-2.5 bg-[#B11226] hover:bg-[#D61F36] text-white rounded-lg text-xs font-bold shadow-sm transition-all flex items-center justify-center gap-1.5"
+              type="button"
+              onClick={handlePresidentFastLogin}
+              className="w-full flex items-center justify-between p-3 rounded-xl bg-[#161616] hover:bg-[#1c1c1c] border border-[#282828] hover:border-red-800/60 transition-all text-left group"
             >
-              <span>Access TaskHub Portal</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <div className="flex items-center gap-2.5">
+                <Avatar user={presidentUser} size="sm" />
+                <div>
+                  <p className="text-xs font-bold text-white group-hover:text-red-400 transition-colors">
+                    {presidentUser.name}
+                  </p>
+                  <p className="text-[10px] text-zinc-400">President • {presidentUser.email}</p>
+                </div>
+              </div>
+
+              <span className="px-2.5 py-1 text-[10px] font-extrabold uppercase bg-red-950/60 text-red-400 border border-red-800/60 rounded-lg">
+                Enter as President →
+              </span>
             </button>
-          </form>
-        )}
-
-        {/* ---------------------------------------------------- */}
-        {/* MODE B: 1-CLICK ROSTER WITH BRANCH & YEAR BADGES */}
-        {/* ---------------------------------------------------- */}
-        {loginMode === 'quick' && (
-          <div className="space-y-4 max-h-96 overflow-y-auto pr-1">
-            
-            {/* Executive */}
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-2 flex items-center gap-1.5">
-                <Shield className="w-3 h-3 text-red-400" />
-                Executive
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {users.filter(u => u.role === 'President' || u.role === 'GS').map(u => (
-                  <button
-                    key={u.id}
-                    type="button"
-                    onClick={() => handleQuickLogin(u)}
-                    className="p-2.5 rounded-xl bg-[#151515] hover:bg-[#1a1a1a] border border-[#252525] hover:border-red-800/50 text-left transition-all flex items-center justify-between gap-2 group"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <Avatar user={u} size="xs" />
-                      <div className="min-w-0">
-                        <p className="text-xs font-bold text-white group-hover:text-red-400 truncate">{u.name}</p>
-                        <p className="text-[10px] text-zinc-400">{u.branch} • {u.year}</p>
-                      </div>
-                    </div>
-                    <span className="px-2 py-0.5 text-[9px] font-bold uppercase bg-zinc-800 text-red-400 rounded shrink-0">
-                      {u.role}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Leads */}
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-2 flex items-center gap-1.5">
-                <Briefcase className="w-3 h-3 text-zinc-400" />
-                Department Leads
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {users.filter(u => u.role === 'Lead').map(u => (
-                  <button
-                    key={u.id}
-                    type="button"
-                    onClick={() => handleQuickLogin(u)}
-                    className="p-2.5 rounded-xl bg-[#151515] hover:bg-[#1a1a1a] border border-[#252525] hover:border-zinc-700 text-left transition-all flex items-center justify-between gap-2 group"
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Avatar user={u} size="xs" />
-                      <div className="min-w-0">
-                        <p className="text-xs font-bold text-white group-hover:text-white truncate">{u.name}</p>
-                        <p className="text-[10px] text-zinc-400">{u.department} Lead • {u.branch}</p>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Members */}
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-2 flex items-center gap-1.5">
-                <Users className="w-3 h-3 text-zinc-400" />
-                Team Members
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {users.filter(u => u.role === 'Member').map(u => (
-                  <button
-                    key={u.id}
-                    type="button"
-                    onClick={() => handleQuickLogin(u)}
-                    className="p-2.5 rounded-xl bg-[#151515] hover:bg-[#1a1a1a] border border-[#252525] hover:border-zinc-700 text-left transition-all flex items-center justify-between gap-2 group"
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Avatar user={u} size="xs" />
-                      <div className="min-w-0">
-                        <p className="text-xs font-semibold text-zinc-200 group-hover:text-white truncate">{u.name}</p>
-                        <p className="text-[10px] text-zinc-400">{u.department} • {u.year}</p>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
           </div>
         )}
+
+        {/* Footer info note */}
+        <p className="text-[11px] text-zinc-500 text-center leading-relaxed">
+          New to E-Cell TaskHub? Contact President <strong className="text-zinc-400">Shubham</strong> to add your profile to the roster and receive your access key.
+        </p>
 
       </div>
     </div>

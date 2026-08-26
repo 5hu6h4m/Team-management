@@ -5,24 +5,25 @@ import { api } from '../services/api';
 
 const AuthContext = createContext();
 
+const STORAGE_KEY = 'ecell_users_v3';
+
 export function AuthProvider({ children }) {
   const [users, setUsers] = useState(() => {
-    return loadFromStorage('ecell_users', INITIAL_USERS);
+    return loadFromStorage(STORAGE_KEY, INITIAL_USERS);
   });
 
-  // Current logged in user (null on fresh visit so Login Page appears first)
   const [currentUser, setCurrentUser] = useState(() => {
     const saved = localStorage.getItem('ecell_current_user_id');
     if (saved) {
-      const found = loadFromStorage('ecell_users', INITIAL_USERS).find(u => u.id === saved);
+      const found = loadFromStorage(STORAGE_KEY, INITIAL_USERS).find(u => u.id === saved);
       return found || null;
     }
-    return null; // Login page shows first!
+    return null; // Always show clean professional login screen first
   });
 
-  // Keep local storage synced
+  // Keep storage synced
   useEffect(() => {
-    saveToStorage('ecell_users', users);
+    saveToStorage(STORAGE_KEY, users);
   }, [users]);
 
   useEffect(() => {
@@ -46,9 +47,17 @@ export function AuthProvider({ children }) {
     }).catch(() => {});
   }, []);
 
-  // Login handler
-  const login = (identifier, enteredKey) => {
-    const query = identifier.trim().toLowerCase();
+  // Professional Gmail + Password/Key login
+  const login = (emailOrGmail, enteredPassword) => {
+    if (!emailOrGmail || !emailOrGmail.trim()) {
+      return { success: false, message: 'Please enter your registered Gmail or Email address.' };
+    }
+
+    if (!enteredPassword || !enteredPassword.trim()) {
+      return { success: false, message: 'Please enter your access password / key.' };
+    }
+
+    const query = emailOrGmail.trim().toLowerCase();
     const found = users.find(
       u => u.email.toLowerCase() === query || 
            u.name.toLowerCase() === query ||
@@ -56,18 +65,25 @@ export function AuthProvider({ children }) {
     );
 
     if (!found) {
-      return { success: false, message: 'Member account not found with this Name or Email.' };
+      return { 
+        success: false, 
+        message: 'No account found with this Gmail/Email. Please contact E-Cell President to register your profile.' 
+      };
     }
 
     if (found.status === 'inactive') {
-      return { success: false, message: 'This member account is deactivated. Contact President.' };
+      return { 
+        success: false, 
+        message: 'Your account has been deactivated. Please contact the President.' 
+      };
     }
 
-    // Check accessKey if provided
-    if (enteredKey && enteredKey.trim()) {
-      if (found.accessKey && found.accessKey !== enteredKey.trim()) {
-        return { success: false, message: 'Invalid Access Key / Password provided for this member.' };
-      }
+    const expectedKey = found.accessKey || 'shubham123';
+    if (expectedKey !== enteredPassword.trim()) {
+      return { 
+        success: false, 
+        message: 'Incorrect Access Password / Key. Please verify with President.' 
+      };
     }
 
     setCurrentUser(found);
@@ -84,14 +100,14 @@ export function AuthProvider({ children }) {
     const defaultKey = userData.accessKey?.trim() || `${userData.name.toLowerCase().split(' ')[0]}123`;
     const newUser = {
       id: `u-${Date.now()}`,
-      name: userData.name,
-      email: userData.email,
+      name: userData.name.trim(),
+      email: userData.email.trim().toLowerCase(),
       role: userData.role || 'Member',
       department: userData.department || 'General',
-      branch: userData.branch || 'Engineering',
-      year: userData.year || '1st Year (FE)',
+      branch: userData.branch || 'Computer Engineering',
+      year: userData.year || '2nd Year (SE)',
       accessKey: defaultKey,
-      phone: userData.phone || '',
+      phone: userData.phone?.trim() || '',
       avatar: userData.avatar || `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80`,
       status: 'active',
       completionRate: 100,
