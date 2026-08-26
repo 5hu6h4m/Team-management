@@ -1,120 +1,145 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { INITIAL_USERS } from '../mock/seedData';
 import { loadFromStorage, saveToStorage } from '../utils/storage';
+import { INITIAL_USERS } from '../mock/seedData';
+import { api } from '../services/api';
 
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
-  const [users, setUsers] = useState(() => loadFromStorage('users', INITIAL_USERS));
-  
-  // Default to President Shubham for easy exploration
-  const [currentUser, setCurrentUser] = useState(() => {
-    const savedId = loadFromStorage('current_user_id', 'u-president');
-    const found = users.find(u => u.id === savedId);
-    return found || users[0];
+  const [users, setUsers] = useState(() => {
+    return loadFromStorage('ecell_users', INITIAL_USERS);
   });
 
+  // Current logged in user (null on fresh visit so Login Page appears first)
+  const [currentUser, setCurrentUser] = useState(() => {
+    const saved = localStorage.getItem('ecell_current_user_id');
+    if (saved) {
+      const found = loadFromStorage('ecell_users', INITIAL_USERS).find(u => u.id === saved);
+      return found || null;
+    }
+    return null; // Login page shows first!
+  });
+
+  // Keep local storage synced
   useEffect(() => {
-    saveToStorage('users', users);
+    saveToStorage('ecell_users', users);
   }, [users]);
 
   useEffect(() => {
     if (currentUser) {
-      saveToStorage('current_user_id', currentUser.id);
+      localStorage.setItem('ecell_current_user_id', currentUser.id);
+    } else {
+      localStorage.removeItem('ecell_current_user_id');
     }
   }, [currentUser]);
 
-  // Fast switch to another user role
-  const switchUser = (userId) => {
-    const target = users.find(u => u.id === userId);
-    if (target) {
-      setCurrentUser(target);
-    }
-  };
+  // Load from MongoDB backend if available
+  useEffect(() => {
+    api.getUsers().then(data => {
+      if (data && Array.isArray(data) && data.length > 0) {
+        setUsers(data);
+        if (currentUser) {
+          const updated = data.find(u => u.id === currentUser.id);
+          if (updated) setCurrentUser(updated);
+        }
+      }
+    }).catch(() => {});
+  }, []);
 
-  const login = (emailOrUsername) => {
+  // Login handler
+  const login = (identifier, enteredKey) => {
+    const query = identifier.trim().toLowerCase();
     const found = users.find(
-      u => u.email.toLowerCase() === emailOrUsername.toLowerCase() ||
-           u.name.toLowerCase() === emailOrUsername.toLowerCase()
+      u => u.email.toLowerCase() === query || 
+           u.name.toLowerCase() === query ||
+           u.id.toLowerCase() === query
     );
-    if (found) {
-      setCurrentUser(found);
-      return { success: true, user: found };
+
+    if (!found) {
+      return { success: false, message: 'Member account not found with this Name or Email.' };
     }
-    return { success: false, message: 'User not found. Try president@ecell.org or select a quick profile.' };
+
+    if (found.status === 'inactive') {
+      return { success: false, message: 'This member account is deactivated. Contact President.' };
+    }
+
+    // Check accessKey if provided
+    if (enteredKey && enteredKey.trim()) {
+      if (found.accessKey && found.accessKey !== enteredKey.trim()) {
+        return { success: false, message: 'Invalid Access Key / Password provided for this member.' };
+      }
+    }
+
+    setCurrentUser(found);
+    return { success: true, user: found };
   };
 
   const logout = () => {
-    // Switch to null or back to login screen
     setCurrentUser(null);
+    localStorage.removeItem('ecell_current_user_id');
   };
 
+  // Add Member (President only)
   const addUser = (userData) => {
+    const defaultKey = userData.accessKey?.trim() || `${userData.name.toLowerCase().split(' ')[0]}123`;
     const newUser = {
-      ...userData,
       id: `u-${Date.now()}`,
+      name: userData.name,
+      email: userData.email,
+      role: userData.role || 'Member',
+      department: userData.department || 'General',
+      branch: userData.branch || 'Engineering',
+      year: userData.year || '1st Year (FE)',
+      accessKey: defaultKey,
+      phone: userData.phone || '',
+      avatar: userData.avatar || `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80`,
       status: 'active',
       completionRate: 100,
-      joinedDate: new Date().toISOString().split('T')[0],
-      avatar: userData.avatar || `https://images.unsplash.com/photo-${1534528741775 + Math.floor(Math.random() * 1000)}?w=150&auto=format&fit=crop&q=80`
+      joinedDate: new Date().toISOString().split('T')[0]
     };
-    setUsers(prev => [...prev, newUser]);
+
+    setUsers(prev => [newUser, ...prev]);
+    api.createUser(newUser).catch(() => {});
     return newUser;
   };
 
-  const updateUserRole = (userId, newRole, newDepartment) => {
-    setUsers(prev => prev.map(u => {
-      if (u.id === userId) {
-        return {
-          ...u,
-          role: newRole,
-          department: newDepartment || u.department
-        };
-      }
-      return u;
-    }));
+  // Update Member
+  const updateUser = (userId, updates) => {
+    setUsers(prev => prev.map(u => u.id === userId ? { ...u, ...updates } : u));
+    if (currentUser?.id === userId) {
+      setCurrentUser(prev => ({ ...prev, ...updates }));
+    }
+    api.updateUser(userId, updates).catch(() => {});
   };
 
+  // Toggle Active/Inactive status
   const toggleUserStatus = (userId) => {
     setUsers(prev => prev.map(u => {
       if (u.id === userId) {
-        return {
-          ...u,
-          status: u.status === 'active' ? 'inactive' : 'active'
-        };
+        const nextStatus = u.status === 'active' ? 'inactive' : 'active';
+        return { ...u, status: nextStatus };
       }
       return u;
     }));
-  };
-
-  const deleteUser = (userId) => {
-    setUsers(prev => prev.filter(u => u.id !== userId));
+    api.toggleUserStatus(userId).catch(() => {});
   };
 
   return (
-    <AuthContext.Provider
-      value={{
-        users,
-        currentUser,
-        setCurrentUser,
-        switchUser,
-        login,
-        logout,
-        addUser,
-        updateUserRole,
-        toggleUserStatus,
-        deleteUser
-      }}
-    >
+    <AuthContext.Provider value={{
+      users,
+      currentUser,
+      setCurrentUser,
+      login,
+      logout,
+      addUser,
+      updateUser,
+      toggleUserStatus
+    }}>
       {children}
     </AuthContext.Provider>
   );
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
+  return useContext(AuthContext);
 }

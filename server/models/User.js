@@ -10,6 +10,9 @@ const userSchema = new mongoose.Schema({
     default: 'Member' 
   },
   department: { type: String, default: 'General' },
+  branch: { type: String, default: 'Engineering' },
+  year: { type: String, default: '1st Year (FE)' },
+  accessKey: { type: String, default: 'ecell123' },
   phone: { type: String, default: '' },
   avatar: { type: String, default: '' },
   status: { type: String, enum: ['active', 'inactive'], default: 'active' },
