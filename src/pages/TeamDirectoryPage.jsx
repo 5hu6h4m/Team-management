@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTasks } from '../context/TaskContext';
 import { MemberCard } from '../components/team/MemberCard';
 import { getWorkloadStatus } from '../utils/deadlineHelper';
-import { Search, UserPlus } from 'lucide-react';
+import { Search, UserPlus, FilterX } from 'lucide-react';
 
 export function TeamDirectoryPage({ onSelectUser, onMessageUser, onOpenAdminAddMember }) {
   const { users, currentUser } = useAuth();
@@ -21,14 +21,37 @@ export function TeamDirectoryPage({ onSelectUser, onMessageUser, onOpenAdminAddM
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchesName = u.name.toLowerCase().includes(q);
-        const matchesDept = u.department.toLowerCase().includes(q);
-        const matchesRole = u.role.toLowerCase().includes(q);
-        if (!matchesName && !matchesDept && !matchesRole) return false;
+        const matchesDept = (u.department || '').toLowerCase().includes(q);
+        const matchesRole = (u.role || '').toLowerCase().includes(q);
+        const matchesEmail = (u.email || '').toLowerCase().includes(q);
+        if (!matchesName && !matchesDept && !matchesRole && !matchesEmail) return false;
       }
 
-      if (selectedDept !== 'ALL' && u.department !== selectedDept) return false;
-      if (selectedRole !== 'ALL' && u.role !== selectedRole) return false;
+      // Department filter (Case-insensitive & relaxed match)
+      if (selectedDept !== 'ALL') {
+        if (!u.department) return false;
+        const uDept = u.department.toLowerCase().trim();
+        const sDept = selectedDept.toLowerCase().trim();
+        if (!uDept.includes(sDept) && !sDept.includes(uDept)) return false;
+      }
 
+      // Role filter (Case-insensitive & relaxed match)
+      if (selectedRole !== 'ALL') {
+        const uRole = (u.role || '').toLowerCase().trim();
+        const sRole = selectedRole.toLowerCase().trim();
+
+        if (sRole === 'lead') {
+          if (uRole !== 'lead' && uRole !== 'department lead') return false;
+        } else if (sRole === 'member') {
+          if (uRole !== 'member' && uRole !== 'team member') return false;
+        } else if (sRole === 'gs') {
+          if (uRole !== 'gs' && uRole !== 'general secretary') return false;
+        } else {
+          if (uRole !== sRole) return false;
+        }
+      }
+
+      // Workload filter
       if (selectedWorkload !== 'ALL') {
         const activeCount = getUserActiveTaskCount(u.id);
         const status = getWorkloadStatus(activeCount);
@@ -39,6 +62,13 @@ export function TeamDirectoryPage({ onSelectUser, onMessageUser, onOpenAdminAddM
     });
   }, [users, searchQuery, selectedDept, selectedRole, selectedWorkload, getUserActiveTaskCount]);
 
+  const handleResetFilters = () => {
+    setSearchQuery('');
+    setSelectedDept('ALL');
+    setSelectedWorkload('ALL');
+    setSelectedRole('ALL');
+  };
+
   return (
     <div className="space-y-6 pb-12">
       
@@ -47,7 +77,7 @@ export function TeamDirectoryPage({ onSelectUser, onMessageUser, onOpenAdminAddM
         <div>
           <h1 className="text-xl font-bold text-white tracking-tight">Team Directory</h1>
           <p className="text-xs text-zinc-400 mt-0.5">
-            Member bandwidth, active workload balancing, and department rosters
+            Members bandwidth, active workload, and department assignments
           </p>
         </div>
 
@@ -68,7 +98,7 @@ export function TeamDirectoryPage({ onSelectUser, onMessageUser, onOpenAdminAddM
           <Search className="w-3.5 h-3.5 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Search member by name, department, role..."
+            placeholder="Search member by name, department, role, email..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-8 pr-3 py-1.5 text-xs bg-[#181818] border border-[#252525] rounded-lg text-white placeholder-zinc-500 focus:outline-none"
@@ -103,16 +133,16 @@ export function TeamDirectoryPage({ onSelectUser, onMessageUser, onOpenAdminAddM
               className="w-full px-2.5 py-1.5 text-xs bg-[#181818] border border-[#252525] rounded-lg text-zinc-200 focus:outline-none"
             >
               <option value="ALL">All Departments</option>
-              {departments.map(d => (
-                <option key={d.id} value={d.name}>{d.name}</option>
-              ))}
               <option value="Executive">Executive</option>
+              {departments.map(d => (
+                <option key={d.id} value={d.name}>{d.name} Team</option>
+              ))}
             </select>
           </div>
 
           <div>
             <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1">
-              Role
+              Role / Position
             </label>
             <select
               value={selectedRole}
@@ -121,25 +151,38 @@ export function TeamDirectoryPage({ onSelectUser, onMessageUser, onOpenAdminAddM
             >
               <option value="ALL">All Roles</option>
               <option value="President">President</option>
-              <option value="GS">GS</option>
-              <option value="Lead">Lead</option>
-              <option value="Member">Member</option>
+              <option value="GS">General Secretary (GS)</option>
+              <option value="Lead">Department Lead</option>
+              <option value="Member">Team Member</option>
             </select>
           </div>
         </div>
       </div>
 
-      {/* Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredUsers.map(user => (
-          <MemberCard
-            key={user.id}
-            user={user}
-            onSelectUser={onSelectUser}
-            onMessageUser={onMessageUser}
-          />
-        ))}
-      </div>
+      {/* Member Cards Grid */}
+      {filteredUsers.length === 0 ? (
+        <div className="p-12 text-center bg-[#141414] rounded-2xl border border-dashed border-[#252525] space-y-3">
+          <p className="text-xs text-zinc-400">No members matched the selected filter criteria.</p>
+          <button
+            onClick={handleResetFilters}
+            className="px-3 py-1.5 bg-[#1e1e24] hover:bg-[#282830] text-zinc-200 text-xs font-semibold rounded-lg inline-flex items-center gap-1.5"
+          >
+            <FilterX className="w-3.5 h-3.5" />
+            <span>Reset Filters</span>
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {filteredUsers.map(user => (
+            <MemberCard
+              key={user.id}
+              user={user}
+              onSelect={() => onSelectUser && onSelectUser(user)}
+              onMessage={() => onMessageUser && onMessageUser(user.id)}
+            />
+          ))}
+        </div>
+      )}
 
     </div>
   );

@@ -1,50 +1,54 @@
 import React from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
-import { useChat } from '../../context/ChatContext';
 import { useTasks } from '../../context/TaskContext';
 import { 
   LayoutDashboard, 
+  Users, 
+  Network, 
   CheckSquare, 
   Layers, 
-  Users, 
   MessageSquare, 
   BarChart3, 
   Settings, 
-  Plus, 
-  Circle
+  Plus
 } from 'lucide-react';
 
 export function Sidebar({ activeTab, onNavigate, onOpenCreateTask }) {
   const { currentUser } = useAuth();
-  const { unreadCount } = useNotifications();
-  const { totalUnreadMessages } = useChat();
   const { tasks } = useTasks();
 
   const isPresident = currentUser?.role === 'President';
-  const isGS = currentUser?.role === 'GS';
-  const isLead = currentUser?.role === 'Lead';
   const isMember = currentUser?.role === 'Member';
-
-  const myActionableTasksCount = tasks.filter(t => {
-    if (isMember) return t.assignedToId === currentUser?.id && t.status !== 'COMPLETED';
-    if (isLead) return t.department === currentUser?.department && t.status !== 'COMPLETED';
-    return t.status !== 'COMPLETED';
-  }).length;
 
   const navItems = [
     {
       id: 'dashboard',
       label: 'Dashboard',
       icon: LayoutDashboard,
-      roles: ['President', 'GS', 'Lead', 'Member']
+      roles: ['President', 'GS', 'Lead', 'Member'],
+      tabKey: 'dashboard'
+    },
+    {
+      id: 'team',
+      label: 'Team Directory',
+      icon: Users,
+      roles: ['President', 'GS', 'Lead', 'Member'],
+      tabKey: 'team'
+    },
+    {
+      id: 'hierarchy',
+      label: 'Team Hierarchy',
+      icon: Network,
+      roles: ['President', 'GS', 'Lead', 'Member'],
+      tabKey: 'hierarchy'
     },
     {
       id: 'my-tasks',
       label: 'My Tasks',
       icon: CheckSquare,
       roles: ['President', 'GS', 'Lead', 'Member'],
-      badge: myActionableTasksCount > 0 ? myActionableTasksCount : null,
+      comingSoon: true,
       tabKey: 'tasks'
     },
     {
@@ -52,21 +56,15 @@ export function Sidebar({ activeTab, onNavigate, onOpenCreateTask }) {
       label: 'All Tasks',
       icon: Layers,
       roles: ['President', 'GS', 'Lead'],
+      comingSoon: true,
       tabKey: 'tasks'
-    },
-    {
-      id: 'team',
-      label: 'Team',
-      icon: Users,
-      roles: ['President', 'GS', 'Lead', 'Member'],
-      tabKey: 'team'
     },
     {
       id: 'messages',
       label: 'Messages',
       icon: MessageSquare,
       roles: ['President', 'GS', 'Lead', 'Member'],
-      badge: totalUnreadMessages > 0 ? totalUnreadMessages : null,
+      comingSoon: true,
       tabKey: 'messages'
     },
     {
@@ -74,6 +72,7 @@ export function Sidebar({ activeTab, onNavigate, onOpenCreateTask }) {
       label: 'Analytics',
       icon: BarChart3,
       roles: ['President', 'GS', 'Lead'],
+      comingSoon: true,
       tabKey: 'analytics'
     },
   ];
@@ -103,7 +102,7 @@ export function Sidebar({ activeTab, onNavigate, onOpenCreateTask }) {
           </p>
         </div>
 
-        {/* Primary Red CTA Button (President / GS / Lead) */}
+        {/* Primary Red CTA Button */}
         {!isMember && (
           <div>
             <button
@@ -123,9 +122,25 @@ export function Sidebar({ activeTab, onNavigate, onOpenCreateTask }) {
             .map(item => {
               const Icon = item.icon;
               const targetKey = item.tabKey || item.id;
-              const isActive = (item.id === 'my-tasks' && activeTab === 'tasks') || 
-                               (item.id === 'all-tasks' && activeTab === 'tasks') ||
-                               activeTab === targetKey;
+              const isActive = !item.comingSoon && activeTab === targetKey;
+
+              if (item.comingSoon) {
+                return (
+                  <div
+                    key={item.id}
+                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs text-zinc-600 cursor-not-allowed select-none opacity-60"
+                    title="Coming soon in next release"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Icon className="w-3.5 h-3.5 text-zinc-600" />
+                      <span className="text-zinc-500">{item.label}</span>
+                    </div>
+                    <span className="px-1.5 py-0.2 text-[9px] font-semibold bg-[#161616] text-zinc-600 rounded border border-[#222226]">
+                      Soon
+                    </span>
+                  </div>
+                );
+              }
 
               return (
                 <button
@@ -141,11 +156,6 @@ export function Sidebar({ activeTab, onNavigate, onOpenCreateTask }) {
                     <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-red-400' : 'text-zinc-500'}`} />
                     <span>{item.label}</span>
                   </div>
-                  {item.badge && (
-                    <span className="px-1.5 py-0.2 text-[10px] font-bold bg-zinc-800 text-zinc-300 rounded border border-zinc-700">
-                      {item.badge}
-                    </span>
-                  )}
                 </button>
               );
             })}
@@ -182,14 +192,14 @@ export function Sidebar({ activeTab, onNavigate, onOpenCreateTask }) {
 
       </div>
 
-      {/* User Footer (Point 2: ● Shubham / PRESIDENT) */}
+      {/* User Footer */}
       <div className="pt-3 border-t border-[#1e1e24] px-2 flex items-center justify-between">
         <div className="flex items-center gap-2 min-w-0">
           <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
           <div className="min-w-0">
             <p className="text-xs font-bold text-zinc-200 truncate">{currentUser?.name}</p>
-            <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">
-              {currentUser?.role}
+            <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold truncate">
+              {currentUser?.role === 'GS' ? 'General Secretary' : currentUser?.role}
             </p>
           </div>
         </div>

@@ -1,12 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { 
-  Mail, 
-  Lock, 
-  ArrowRight, 
-  ShieldCheck, 
-  KeyRound
-} from 'lucide-react';
+import { Mail, Lock, ArrowRight, ShieldCheck } from 'lucide-react';
 
 export function LoginPage({ onLoginSuccess }) {
   const { login } = useAuth();
@@ -21,7 +15,7 @@ export function LoginPage({ onLoginSuccess }) {
     setError('');
 
     if (!email.trim()) {
-      setError('Please enter your registered Email address.');
+      setError('Please enter your email.');
       return;
     }
 
@@ -44,87 +38,72 @@ export function LoginPage({ onLoginSuccess }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#080808] flex items-center justify-center p-4 sm:p-6 font-sans">
-      <div className="w-full max-w-md bg-[#111111] border border-[#222226] rounded-2xl p-6 sm:p-8 space-y-6 shadow-2xl">
+    <div className="min-h-screen bg-[#080808] flex items-center justify-center p-4 font-sans">
+      <div className="w-full max-w-sm bg-[#111111] border border-[#222226] rounded-2xl p-6 sm:p-7 space-y-5 shadow-2xl">
         
-        {/* Brand Header */}
-        <div className="text-center space-y-1.5 border-b border-[#222226] pb-5">
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#1c1213] border border-[#3b171a] text-red-400 text-[10px] font-bold uppercase tracking-widest mb-1">
-            <ShieldCheck className="w-3 h-3" />
-            E-Cell MET Internal OS
-          </div>
-          
-          <h1 className="text-xl font-bold text-white tracking-tight">
-            TASKHUB PORTAL
+        {/* Header */}
+        <div className="text-center space-y-1 border-b border-[#222226] pb-4">
+          <h1 className="text-lg font-bold text-white tracking-tight uppercase">
+            E-CELL MET <span className="text-red-500">TASKHUB</span>
           </h1>
           <p className="text-xs text-zinc-400">
-            Sign in to access your E-Cell workspace
+            Sign in to your account
           </p>
         </div>
 
         {error && (
-          <div className="p-3 rounded-xl bg-red-950/40 border border-red-800/60 text-red-300 text-xs font-medium leading-relaxed">
+          <div className="p-2.5 rounded-lg bg-red-950/40 border border-red-800/60 text-red-300 text-xs font-medium text-center">
             {error}
           </div>
         )}
 
-        {/* Standard Email + Password Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-3.5">
           
-          {/* Email Input */}
           <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-300 mb-1.5">
-              Email Address
+            <label className="block text-[11px] font-semibold text-zinc-300 mb-1">
+              Email
             </label>
             <div className="relative">
-              <Mail className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <Mail className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="email"
                 required
-                placeholder="president@ecell.org or member@gmail.com"
+                placeholder="Enter your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-10 pr-3.5 py-2.5 text-xs bg-[#161616] border border-[#262626] rounded-xl text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-500 transition-colors"
+                className="w-full pl-9 pr-3 py-2 text-xs bg-[#161616] border border-[#262626] rounded-lg text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-500"
               />
             </div>
           </div>
 
-          {/* Password Input */}
           <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-300 mb-1.5">
+            <label className="block text-[11px] font-semibold text-zinc-300 mb-1">
               Password
             </label>
             <div className="relative">
-              <KeyRound className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <Lock className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="password"
                 required
-                placeholder="••••••••••••"
+                placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-3.5 py-2.5 text-xs bg-[#161616] border border-[#262626] rounded-xl text-white font-mono placeholder-zinc-600 focus:outline-none focus:border-zinc-500 transition-colors"
+                className="w-full pl-9 pr-3 py-2 text-xs bg-[#161616] border border-[#262626] rounded-lg text-white font-mono placeholder-zinc-600 focus:outline-none focus:border-zinc-500"
               />
             </div>
           </div>
 
-          {/* Sign In Button */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 bg-[#B11226] hover:bg-[#D61F36] disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-sm transition-all flex items-center justify-center gap-2"
+            className="w-full py-2 bg-[#B11226] hover:bg-[#D61F36] disabled:opacity-50 text-white rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 mt-1"
           >
-            <span>{loading ? 'Authenticating...' : 'Sign In to Workspace'}</span>
+            <span>{loading ? 'Signing in...' : 'Sign In'}</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
 
         </form>
-
-        {/* Footer info */}
-        <div className="pt-2 border-t border-[#1f1f23]">
-          <p className="text-[11px] text-zinc-500 text-center leading-relaxed">
-            Need an account? Contact President <strong className="text-zinc-400">Shubham</strong> to get your credentials registered.
-          </p>
-        </div>
 
       </div>
     </div>

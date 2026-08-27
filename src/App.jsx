@@ -10,6 +10,7 @@ import { Sidebar } from './components/layout/Sidebar';
 import { DashboardPage } from './pages/DashboardPage';
 import { AllTasksPage } from './pages/AllTasksPage';
 import { TeamDirectoryPage } from './pages/TeamDirectoryPage';
+import { TeamHierarchyPage } from './pages/TeamHierarchyPage';
 import { MessagesPage } from './pages/MessagesPage';
 import { AdminPanelPage } from './pages/AdminPanelPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
@@ -47,10 +48,6 @@ function MainApp() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  if (!currentUser) {
-    return <LoginPage onLoginSuccess={() => setActiveTab('dashboard')} />;
-  }
-
   const handleOpenTaskDetail = (taskId) => {
     setActiveDetailTaskId(taskId);
   };
@@ -72,9 +69,14 @@ function MainApp() {
     setActiveTab('messages');
   };
 
+  // If user is not logged in, render the clean login screen
+  if (!currentUser) {
+    return <LoginPage />;
+  }
+
   return (
-    <div className="min-h-screen bg-[#080808] text-[#f5f5f5] flex flex-col font-sans">
-      {/* Top Clean Navbar */}
+    <div className="min-h-screen bg-[#080808] text-white flex flex-col antialiased selection:bg-red-500 selection:text-white">
+      {/* Institutional Top Navbar */}
       <Navbar
         onOpenTaskDetail={handleOpenTaskDetail}
         searchQuery={searchQuery}
@@ -85,7 +87,7 @@ function MainApp() {
 
       {/* Main Layout */}
       <div className="flex-1 flex max-w-[1600px] w-full mx-auto">
-        {/* 240px Left Sidebar */}
+        {/* Clean Left Sidebar */}
         <Sidebar
           activeTab={activeTab}
           onNavigate={(tab) => setActiveTab(tab)}
@@ -122,6 +124,13 @@ function MainApp() {
             />
           )}
 
+          {activeTab === 'hierarchy' && (
+            <TeamHierarchyPage
+              onSelectUser={handleSelectUser}
+              onOpenAdminAddMember={() => setActiveTab('admin')}
+            />
+          )}
+
           {activeTab === 'messages' && <MessagesPage />}
 
           {activeTab === 'admin' && (
@@ -134,7 +143,7 @@ function MainApp() {
         </main>
       </div>
 
-      {/* Slide-over Drawers (Points 9 & 11) */}
+      {/* Slide-over Drawers */}
       <TaskCreateDrawer
         isOpen={isCreateTaskOpen}
         onClose={() => setIsCreateTaskOpen(false)}
@@ -144,10 +153,10 @@ function MainApp() {
         taskId={activeDetailTaskId}
         isOpen={Boolean(activeDetailTaskId)}
         onClose={() => setActiveDetailTaskId(null)}
-        onOpenSubmitModal={(task) => setSubmissionTask(task)}
+        onSubmitClick={handleSubmitTaskClick}
       />
 
-      {/* Modals */}
+      {/* Action Modals */}
       <TaskSubmissionModal
         task={submissionTask}
         isOpen={Boolean(submissionTask)}
@@ -158,22 +167,23 @@ function MainApp() {
         user={selectedMember}
         isOpen={Boolean(selectedMember)}
         onClose={() => setSelectedMember(null)}
-        onMessageUser={handleMessageUser}
         onOpenTaskDetail={handleOpenTaskDetail}
+        onMessageUser={handleMessageUser}
       />
 
       <CommandCenterModal
         isOpen={isCommandCenterOpen}
         onClose={() => setIsCommandCenterOpen(false)}
-        onAssignTask={() => setIsCreateTaskOpen(true)}
-        onAddMember={() => setActiveTab('admin')}
         onNavigate={(tab) => setActiveTab(tab)}
+        onOpenCreateTask={() => setIsCreateTaskOpen(true)}
+        onOpenTaskDetail={handleOpenTaskDetail}
+        onSelectUser={handleSelectUser}
       />
     </div>
   );
 }
 
-export default function App() {
+export function App() {
   return (
     <AuthProvider>
       <TaskProvider>
@@ -186,3 +196,5 @@ export default function App() {
     </AuthProvider>
   );
 }
+
+export default App;

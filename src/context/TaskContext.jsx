@@ -89,6 +89,38 @@ export function TaskProvider({ children }) {
     }));
   };
 
+  // Direct 1-Click Complete Task
+  const completeTask = (taskId) => {
+    const actorName = currentUser ? currentUser.name : 'Member';
+    const actorId = currentUser ? currentUser.id : 'u-member';
+
+    // Celebration confetti
+    try {
+      confetti({
+        particleCount: 75,
+        spread: 60,
+        origin: { y: 0.6 }
+      });
+    } catch (e) {
+      // ignore
+    }
+
+    setTasks(prev => prev.map(t => {
+      if (t.id === taskId) {
+        return {
+          ...t,
+          status: 'COMPLETED',
+          completedAt: new Date().toISOString(),
+          activityLog: [
+            ...t.activityLog,
+            logActivity(taskId, `${actorName} completed this task`, actorId)
+          ]
+        };
+      }
+      return t;
+    }));
+  };
+
   // Member submits task for review
   const submitTask = (taskId, { deliverableUrl, submissionNotes }) => {
     const actorName = currentUser ? currentUser.name : 'Member';
@@ -98,13 +130,14 @@ export function TaskProvider({ children }) {
       if (t.id === taskId) {
         return {
           ...t,
-          status: 'SUBMITTED',
+          status: 'COMPLETED',
           submittedAt: new Date().toISOString(),
+          completedAt: new Date().toISOString(),
           deliverableUrl: deliverableUrl || t.deliverableUrl,
           submissionNotes: submissionNotes || t.submissionNotes,
           activityLog: [
             ...t.activityLog,
-            logActivity(taskId, `${actorName} submitted task for verification`, actorId)
+            logActivity(taskId, `${actorName} finished work & completed task`, actorId)
           ]
         };
       }
@@ -166,20 +199,39 @@ export function TaskProvider({ children }) {
   };
 
   // Delegate / Reassign task
-  const delegateTask = (taskId, newAssigneeId, note) => {
-    const actorName = currentUser ? currentUser.name : 'User';
+  const delegateTask = (taskId, targetSelection, note) => {
+    const actorName = currentUser ? currentUser.name : 'GS';
     const actorId = currentUser ? currentUser.id : 'u-gs';
-    const newAssignee = users.find(u => u.id === newAssigneeId);
-    const newAssigneeName = newAssignee ? newAssignee.name : 'Team Member';
 
     setTasks(prev => prev.map(t => {
       if (t.id === taskId) {
+        let newDepartment = t.department;
+        let newAssigneeId = targetSelection;
+        let targetLabel = '';
+
+        if (targetSelection.startsWith('dept:')) {
+          newDepartment = targetSelection.replace('dept:', '');
+          const existingLead = users.find(u => u.role === 'Lead' && u.department.toLowerCase() === newDepartment.toLowerCase());
+          newAssigneeId = existingLead ? existingLead.id : `team-${newDepartment.toLowerCase()}`;
+          targetLabel = `${newDepartment} Team`;
+        } else {
+          const newAssignee = users.find(u => u.id === targetSelection);
+          if (newAssignee) {
+            newAssigneeId = newAssignee.id;
+            newDepartment = newAssignee.department || t.department;
+            targetLabel = `${newAssignee.name} (${newDepartment})`;
+          }
+        }
+
         return {
           ...t,
+          assignedById: actorId,
           assignedToId: newAssigneeId,
+          department: newDepartment,
+          status: 'IN_PROGRESS',
           activityLog: [
             ...t.activityLog,
-            logActivity(taskId, `${actorName} delegated task to ${newAssigneeName}${note ? ` (Note: "${note}")` : ''}`, actorId)
+            logActivity(taskId, `${actorName} delegated task to ${targetLabel}${note ? ` (Note: "${note}")` : ''}`, actorId)
           ]
         };
       }
@@ -209,7 +261,7 @@ export function TaskProvider({ children }) {
       if (t.id === taskId) {
         const newSubtask = {
           id: `st-${Date.now()}`,
-          title,
+          title: title.trim(),
           completed: false
         };
         return {
@@ -221,46 +273,38 @@ export function TaskProvider({ children }) {
     }));
   };
 
-  // Delete task
+  // Delete a task
   const deleteTask = (taskId) => {
     setTasks(prev => prev.filter(t => t.id !== taskId));
   };
 
-  // Helper calculation for user workload
+  // Helper to count active tasks for a given user
   const getUserActiveTaskCount = (userId) => {
     return tasks.filter(t => t.assignedToId === userId && t.status !== 'COMPLETED').length;
   };
 
-  // Add Department
-  const addDepartment = (dept) => {
-    const newDept = {
-      id: dept.name.toLowerCase().replace(/\s+/g, '-'),
-      name: dept.name,
-      icon: dept.icon || 'Layers',
-      leadId: dept.leadId || '',
-      color: dept.color || 'blue'
-    };
-    setDepartments(prev => [...prev, newDept]);
+  // Helper to count active tasks for a given department
+  const getDepartmentActiveTaskCount = (departmentName) => {
+    return tasks.filter(t => t.department === departmentName && t.status !== 'COMPLETED').length;
   };
 
   return (
-    <TaskContext.Provider
-      value={{
-        tasks,
-        departments,
-        createTask,
-        startTask,
-        submitTask,
-        verifyAndApproveTask,
-        requestRevision,
-        delegateTask,
-        toggleSubtask,
-        addSubtask,
-        deleteTask,
-        getUserActiveTaskCount,
-        addDepartment
-      }}
-    >
+    <TaskContext.Provider value={{
+      tasks,
+      departments,
+      createTask,
+      startTask,
+      completeTask,
+      submitTask,
+      verifyAndApproveTask,
+      requestRevision,
+      delegateTask,
+      toggleSubtask,
+      addSubtask,
+      deleteTask,
+      getUserActiveTaskCount,
+      getDepartmentActiveTaskCount
+    }}>
       {children}
     </TaskContext.Provider>
   );

@@ -5,20 +5,33 @@ import { api } from '../services/api';
 
 const AuthContext = createContext();
 
-const STORAGE_KEY = 'ecell_users_v4';
+const STORAGE_KEY = 'ecell_users_v7';
 
 export function AuthProvider({ children }) {
   const [users, setUsers] = useState(() => {
-    return loadFromStorage(STORAGE_KEY, INITIAL_USERS);
+    const saved = loadFromStorage(STORAGE_KEY, []);
+    if (!saved || saved.length === 0) {
+      // Also check v6 or older keys
+      const oldV6 = loadFromStorage('ecell_users_v6', null);
+      if (oldV6 && Array.isArray(oldV6)) {
+        const existingIds = new Set(oldV6.map(u => u.id));
+        const missing = INITIAL_USERS.filter(u => !existingIds.has(u.id));
+        return [...oldV6, ...missing];
+      }
+      return INITIAL_USERS;
+    }
+    const existingIds = new Set(saved.map(u => u.id));
+    const missing = INITIAL_USERS.filter(u => !existingIds.has(u.id));
+    return [...saved, ...missing];
   });
 
   const [currentUser, setCurrentUser] = useState(() => {
     const saved = localStorage.getItem('ecell_current_user_id');
     if (saved) {
-      const found = loadFromStorage(STORAGE_KEY, INITIAL_USERS).find(u => u.id === saved);
-      return found || null;
+      const found = users.find(u => u.id === saved);
+      return found || users[0] || null;
     }
-    return null; // Always show clean login screen first
+    return users[0] || null;
   });
 
   // Keep storage synced
@@ -38,7 +51,11 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     api.getUsers().then(data => {
       if (data && Array.isArray(data) && data.length > 0) {
-        setUsers(data);
+        setUsers(prev => {
+          const existingIds = new Set(data.map(u => u.id));
+          const missing = prev.filter(u => !existingIds.has(u.id));
+          return [...data, ...missing];
+        });
         if (currentUser) {
           const updated = data.find(u => u.id === currentUser.id);
           if (updated) setCurrentUser(updated);
@@ -48,16 +65,16 @@ export function AuthProvider({ children }) {
   }, []);
 
   // Standard secure login
-  const login = (emailOrGmail, enteredPassword) => {
-    if (!emailOrGmail || !emailOrGmail.trim()) {
-      return { success: false, message: 'Please enter your registered Email address.' };
+  const login = (email, enteredPassword) => {
+    if (!email || !email.trim()) {
+      return { success: false, message: 'Please enter your email.' };
     }
 
     if (!enteredPassword || !enteredPassword.trim()) {
       return { success: false, message: 'Please enter your password.' };
     }
 
-    const query = emailOrGmail.trim().toLowerCase();
+    const query = email.trim().toLowerCase();
     const found = users.find(
       u => u.email.toLowerCase() === query || 
            u.name.toLowerCase() === query ||
@@ -67,14 +84,14 @@ export function AuthProvider({ children }) {
     if (!found) {
       return { 
         success: false, 
-        message: 'No account found with this email. Please contact the E-Cell President.' 
+        message: 'No account found with this email.' 
       };
     }
 
     if (found.status === 'inactive') {
       return { 
         success: false, 
-        message: 'Your account has been deactivated. Please contact the President.' 
+        message: 'Your account has been deactivated.' 
       };
     }
 
@@ -82,7 +99,7 @@ export function AuthProvider({ children }) {
     if (expectedKey !== enteredPassword.trim()) {
       return { 
         success: false, 
-        message: 'Incorrect Password. Please check your credentials.' 
+        message: 'Incorrect password.' 
       };
     }
 
