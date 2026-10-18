@@ -1,42 +1,48 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { INITIAL_TASKS, INITIAL_DEPARTMENTS } from '../mock/seedData';
-import { loadFromStorage, saveToStorage } from '../utils/storage';
+import { INITIAL_DEPARTMENTS } from '../mock/seedData';
 import { useAuth } from './AuthContext';
-import { getDeadlineStatus } from '../utils/deadlineHelper';
+import { api } from '../services/api';
 import confetti from 'canvas-confetti';
-
-const STORAGE_TASKS_KEY = 'ecell_tasks_v3';
-const STORAGE_DEPTS_KEY = 'ecell_departments_v3';
 
 const TaskContext = createContext();
 
 export function TaskProvider({ children }) {
   const { currentUser, users } = useAuth();
-  const [tasks, setTasks] = useState(() => loadFromStorage(STORAGE_TASKS_KEY, INITIAL_TASKS));
-  const [departments, setDepartments] = useState(() => loadFromStorage(STORAGE_DEPTS_KEY, INITIAL_DEPARTMENTS));
+  const [tasks, setTasks] = useState([]);
+  const [departments, setDepartments] = useState(INITIAL_DEPARTMENTS);
+  const [tasksLoading, setTasksLoading] = useState(true);
 
+  // Load tasks from MongoDB on mount
   useEffect(() => {
-    saveToStorage(STORAGE_TASKS_KEY, tasks);
-  }, [tasks]);
+    api.getTasks().then(data => {
+      if (data && Array.isArray(data)) {
+        setTasks(data);
+      }
+    }).catch(() => {}).finally(() => setTasksLoading(false));
+  }, []);
 
+  // Load departments from MongoDB on mount
   useEffect(() => {
-    saveToStorage('departments', departments);
-  }, [departments]);
+    api.getDepartments().then(data => {
+      if (data && Array.isArray(data) && data.length > 0) {
+        setDepartments(data);
+      }
+    }).catch(() => {});
+  }, []);
 
   // Helper to append to task's activity log
   const logActivity = (taskId, actionText, userId) => {
     const actorId = userId || (currentUser ? currentUser.id : 'u-president');
-    const newLog = {
+    return {
       id: `a-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
       timestamp: new Date().toISOString(),
       userId: actorId,
       action: actionText
     };
-    return newLog;
   };
 
-  // Create a new task
-  const createTask = (taskData) => {
+  // Create a new task — save to MongoDB immediately
+  const createTask = async (taskData) => {
     const creatorId = currentUser ? currentUser.id : 'u-president';
     const creatorName = currentUser ? currentUser.name : 'President';
     const assignee = users.find(u => u.id === taskData.assignedToId);
@@ -65,25 +71,88 @@ export function TaskProvider({ children }) {
       ]
     };
 
+    // Optimistic update (show immediately in UI)
     setTasks(prev => [newTask, ...prev]);
+
+    // Save to MongoDB backend
+    const saved = await api.createTask(newTask).catch(() => null);
+    if (saved && saved.id) {
+      // Replace optimistic entry with server response if different
+      setTasks(prev => prev.map(t => t.id === newTask.id ? saved : t));
+    }
+
     return newTask;
+  };
+
+  // Helper: update task in state + backend
+  const updateTaskInBackend = async (taskId, updatedTask) => {
+    setTasks(prev => prev.map(t => t.id === taskId ? updatedTask : t));
+    await api.updateTask(taskId, updatedTask).catch(() => {});
+  };
+
+  // Helper to send notifications to President, GS and Assignor
+  const notifyLeadership = (task, title, message, type = 'assigned') => {
+    const leadershipUserIds = new Set();
+    
+    // Add all President and GS users
+    users.forEach(u => {
+      if (u.role === 'President' || u.role === 'GS' || u.role === 'General Secretary') {
+        leadershipUserIds.add(u.id);
+      }
+    });
+
+    // Add assignor
+    if (task.assignedById) leadershipUserIds.add(task.assignedById);
+
+    // Don't send notification to current actor
+    if (currentUser?.id) leadershipUserIds.delete(currentUser.id);
+
+    leadershipUserIds.forEach(targetUserId => {
+      if (!targetUserId) return;
+      const notif = {
+        id: `n-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        userId: targetUserId,
+        type,
+        title,
+        message,
+        timestamp: new Date().toISOString(),
+        read: false,
+        taskId: task.id
+      };
+      api.createNotification(notif).catch(() => {});
+    });
   };
 
   // Start working on task
   const startTask = (taskId) => {
-    const actorName = currentUser ? currentUser.name : 'User';
-    const actorId = currentUser ? currentUser.id : 'u-president';
+    const actorName = currentUser ? currentUser.name : 'Team Member';
+    const actorId = currentUser ? currentUser.id : 'u-member';
     
     setTasks(prev => prev.map(t => {
       if (t.id === taskId) {
-        return {
+        const updated = {
           ...t,
           status: 'IN_PROGRESS',
+          startedAt: t.startedAt || new Date().toISOString(),
+          startedById: actorId,
+          startedByName: actorName,
           activityLog: [
-            ...t.activityLog,
+            ...(t.activityLog || []), 
             logActivity(taskId, `${actorName} started work (Status: In Progress)`, actorId)
           ]
         };
+
+        api.updateTask(taskId, updated).catch(() => {});
+        
+        // Instant alert to GS and President
+        notifyLeadership(
+          updated,
+          `⚡ Work Started: "${t.title}"`,
+          `${actorName} has started actively working on "${t.title}" (${t.department} Team).`,
+          'assigned'
+        );
+
+        return updated;
       }
       return t;
     }));
@@ -93,29 +162,33 @@ export function TaskProvider({ children }) {
   const completeTask = (taskId) => {
     const actorName = currentUser ? currentUser.name : 'Member';
     const actorId = currentUser ? currentUser.id : 'u-member';
-
-    // Celebration confetti
-    try {
-      confetti({
-        particleCount: 75,
-        spread: 60,
-        origin: { y: 0.6 }
-      });
-    } catch (e) {
-      // ignore
-    }
+    try { confetti({ particleCount: 75, spread: 60, origin: { y: 0.6 } }); } catch (e) {}
 
     setTasks(prev => prev.map(t => {
       if (t.id === taskId) {
-        return {
+        const updated = {
           ...t,
           status: 'COMPLETED',
           completedAt: new Date().toISOString(),
+          completedById: actorId,
+          completedByName: actorName,
           activityLog: [
-            ...t.activityLog,
+            ...(t.activityLog || []), 
             logActivity(taskId, `${actorName} completed this task`, actorId)
           ]
         };
+
+        api.updateTask(taskId, updated).catch(() => {});
+        
+        // Notify leadership of task completion
+        notifyLeadership(
+          updated,
+          `🎉 Task Completed: "${t.title}"`,
+          `${actorName} has finalized and completed "${t.title}" (${t.department} Team).`,
+          'completed'
+        );
+
+        return updated;
       }
       return t;
     }));
@@ -124,22 +197,33 @@ export function TaskProvider({ children }) {
   // Member submits task for review
   const submitTask = (taskId, { deliverableUrl, submissionNotes }) => {
     const actorName = currentUser ? currentUser.name : 'Member';
-    const actorId = currentUser ? currentUser.id : 'u-anshu';
+    const actorId = currentUser ? currentUser.id : 'u-member';
 
     setTasks(prev => prev.map(t => {
       if (t.id === taskId) {
-        return {
+        const updated = {
           ...t,
-          status: 'COMPLETED',
+          status: 'SUBMITTED',
           submittedAt: new Date().toISOString(),
-          completedAt: new Date().toISOString(),
           deliverableUrl: deliverableUrl || t.deliverableUrl,
           submissionNotes: submissionNotes || t.submissionNotes,
           activityLog: [
-            ...t.activityLog,
-            logActivity(taskId, `${actorName} finished work & completed task`, actorId)
+            ...(t.activityLog || []), 
+            logActivity(taskId, `${actorName} submitted deliverable for review`, actorId)
           ]
         };
+
+        api.updateTask(taskId, updated).catch(() => {});
+
+        // Notify leadership for review
+        notifyLeadership(
+          updated,
+          `📥 Deliverable Submitted: "${t.title}"`,
+          `${actorName} submitted "${t.title}" for verification.`,
+          'reminder'
+        );
+
+        return updated;
       }
       return t;
     }));
@@ -149,30 +233,19 @@ export function TaskProvider({ children }) {
   const verifyAndApproveTask = (taskId, feedback) => {
     const verifierName = currentUser ? currentUser.name : 'Verifier';
     const verifierId = currentUser ? currentUser.id : 'u-president';
-
-    // Trigger celebration confetti
-    try {
-      confetti({
-        particleCount: 80,
-        spread: 60,
-        origin: { y: 0.6 }
-      });
-    } catch (e) {
-      // ignore
-    }
+    try { confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 } }); } catch (e) {}
 
     setTasks(prev => prev.map(t => {
       if (t.id === taskId) {
         const feedbackText = feedback ? ` (Feedback: "${feedback}")` : '';
-        return {
+        const updated = {
           ...t,
           status: 'COMPLETED',
           completedAt: new Date().toISOString(),
-          activityLog: [
-            ...t.activityLog,
-            logActivity(taskId, `${verifierName} approved & marked as COMPLETED${feedbackText}`, verifierId)
-          ]
+          activityLog: [...(t.activityLog || []), logActivity(taskId, `${verifierName} approved & marked as COMPLETED${feedbackText}`, verifierId)]
         };
+        api.updateTask(taskId, updated).catch(() => {});
+        return updated;
       }
       return t;
     }));
@@ -185,14 +258,13 @@ export function TaskProvider({ children }) {
 
     setTasks(prev => prev.map(t => {
       if (t.id === taskId) {
-        return {
+        const updated = {
           ...t,
           status: 'IN_PROGRESS',
-          activityLog: [
-            ...t.activityLog,
-            logActivity(taskId, `${verifierName} requested revision: "${feedback || 'Please update deliverables'}"`, verifierId)
-          ]
+          activityLog: [...(t.activityLog || []), logActivity(taskId, `${verifierName} requested revision: "${feedback || 'Please update deliverables'}"`, verifierId)]
         };
+        api.updateTask(taskId, updated).catch(() => {});
+        return updated;
       }
       return t;
     }));
@@ -223,17 +295,16 @@ export function TaskProvider({ children }) {
           }
         }
 
-        return {
+        const updated = {
           ...t,
           assignedById: actorId,
           assignedToId: newAssigneeId,
           department: newDepartment,
-          status: 'IN_PROGRESS',
-          activityLog: [
-            ...t.activityLog,
-            logActivity(taskId, `${actorName} delegated task to ${targetLabel}${note ? ` (Note: "${note}")` : ''}`, actorId)
-          ]
+          status: 'PENDING',
+          activityLog: [...(t.activityLog || []), logActivity(taskId, `${actorName} delegated task to ${targetLabel}${note ? ` (Note: "${note}")` : ''}`, actorId)]
         };
+        api.updateTask(taskId, updated).catch(() => {});
+        return updated;
       }
       return t;
     }));
@@ -243,13 +314,12 @@ export function TaskProvider({ children }) {
   const toggleSubtask = (taskId, subtaskId) => {
     setTasks(prev => prev.map(t => {
       if (t.id === taskId) {
-        const updatedSubtasks = t.subtasks.map(st => 
+        const updatedSubtasks = t.subtasks.map(st =>
           st.id === subtaskId ? { ...st, completed: !st.completed } : st
         );
-        return {
-          ...t,
-          subtasks: updatedSubtasks
-        };
+        const updated = { ...t, subtasks: updatedSubtasks };
+        api.updateTask(taskId, updated).catch(() => {});
+        return updated;
       }
       return t;
     }));
@@ -259,15 +329,10 @@ export function TaskProvider({ children }) {
   const addSubtask = (taskId, title) => {
     setTasks(prev => prev.map(t => {
       if (t.id === taskId) {
-        const newSubtask = {
-          id: `st-${Date.now()}`,
-          title: title.trim(),
-          completed: false
-        };
-        return {
-          ...t,
-          subtasks: [...(t.subtasks || []), newSubtask]
-        };
+        const newSubtask = { id: `st-${Date.now()}`, title: title.trim(), completed: false };
+        const updated = { ...t, subtasks: [...(t.subtasks || []), newSubtask] };
+        api.updateTask(taskId, updated).catch(() => {});
+        return updated;
       }
       return t;
     }));
@@ -276,6 +341,13 @@ export function TaskProvider({ children }) {
   // Delete a task
   const deleteTask = (taskId) => {
     setTasks(prev => prev.filter(t => t.id !== taskId));
+    api.deleteTask(taskId).catch(() => {});
+  };
+
+  // Refresh tasks from backend
+  const refreshTasks = async () => {
+    const data = await api.getTasks().catch(() => null);
+    if (data && Array.isArray(data)) setTasks(data);
   };
 
   // Helper to count active tasks for a given user
@@ -292,6 +364,7 @@ export function TaskProvider({ children }) {
     <TaskContext.Provider value={{
       tasks,
       departments,
+      tasksLoading,
       createTask,
       startTask,
       completeTask,
@@ -302,6 +375,7 @@ export function TaskProvider({ children }) {
       toggleSubtask,
       addSubtask,
       deleteTask,
+      refreshTasks,
       getUserActiveTaskCount,
       getDepartmentActiveTaskCount
     }}>

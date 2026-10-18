@@ -9,7 +9,7 @@ export function NotificationDropdown({ isOpen, onClose, onSelectTask }) {
   if (!isOpen) return null;
 
   return (
-    <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-[#111111] rounded-xl shadow-2xl border border-[#252525] py-3 z-50 animate-in fade-in zoom-in-95 duration-100">
+    <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-[#111111] rounded-xl shadow-2xl border border-[#252525] py-3 z-50">
       {/* Header */}
       <div className="flex items-center justify-between px-4 pb-2 border-b border-[#252525]">
         <div className="flex items-center gap-2">

@@ -1,35 +1,43 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { INITIAL_NOTIFICATIONS } from '../mock/seedData';
-import { loadFromStorage, saveToStorage } from '../utils/storage';
 import { useAuth } from './AuthContext';
+import { api } from '../services/api';
 
 const NotificationContext = createContext();
 
 export function NotificationProvider({ children }) {
   const { currentUser } = useAuth();
-  const [notifications, setNotifications] = useState(() => loadFromStorage('notifications', INITIAL_NOTIFICATIONS));
+  const [allNotifications, setAllNotifications] = useState([]);
 
+  // Load notifications from MongoDB on mount
   useEffect(() => {
-    saveToStorage('notifications', notifications);
-  }, [notifications]);
+    api.getNotifications().then(data => {
+      if (data && Array.isArray(data)) {
+        setAllNotifications(data);
+      }
+    }).catch(() => {});
+  }, []);
 
-  // Current user's notifications
-  const userNotifications = notifications.filter(
+  // Current user's notifications only
+  const userNotifications = allNotifications.filter(
     n => !currentUser || n.userId === currentUser.id
   );
 
   const unreadCount = userNotifications.filter(n => !n.read).length;
 
-  const markAsRead = (notifId) => {
-    setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, read: true } : n));
+  const markAsRead = async (notifId) => {
+    setAllNotifications(prev => prev.map(n => n.id === notifId ? { ...n, read: true } : n));
+    await api.markNotificationRead(notifId).catch(() => {});
   };
 
-  const markAllAsRead = () => {
+  const markAllAsRead = async () => {
     if (!currentUser) return;
-    setNotifications(prev => prev.map(n => n.userId === currentUser.id ? { ...n, read: true } : n));
+    setAllNotifications(prev =>
+      prev.map(n => n.userId === currentUser.id ? { ...n, read: true } : n)
+    );
+    await api.markAllNotificationsRead(currentUser.id).catch(() => {});
   };
 
-  const addNotification = ({ userId, type, title, message, taskId }) => {
+  const addNotification = async ({ userId, type, title, message, taskId }) => {
     const newNotif = {
       id: `n-${Date.now()}`,
       userId,
@@ -40,7 +48,8 @@ export function NotificationProvider({ children }) {
       read: false,
       taskId
     };
-    setNotifications(prev => [newNotif, ...prev]);
+    setAllNotifications(prev => [newNotif, ...prev]);
+    await api.createNotification(newNotif).catch(() => {});
   };
 
   return (

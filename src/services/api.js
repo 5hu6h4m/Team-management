@@ -1,14 +1,30 @@
-const API_BASE_URL = 'http://localhost:5000/api';
+// Dynamic API base URL - works from any network location
+function getApiBaseUrl() {
+  // In production, use relative URLs (same origin)
+  if (import.meta.env.PROD) {
+    return '/api';
+  }
+  // In development, use the same host as the frontend but port 5000
+  const host = window.location.hostname;
+  return `http://${host}:5000/api`;
+}
 
 export async function fetchFromApi(endpoint, options = {}) {
+  const API_BASE_URL = getApiBaseUrl();
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 4000); // 4s timeout
+
   try {
     const res = await fetch(`${API_BASE_URL}${endpoint}`, {
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,
       },
+      signal: controller.signal,
       ...options,
     });
+
+    clearTimeout(timeoutId);
 
     if (!res.ok) {
       throw new Error(`API Error: ${res.statusText}`);
@@ -16,7 +32,8 @@ export async function fetchFromApi(endpoint, options = {}) {
 
     return await res.json();
   } catch (err) {
-    console.warn(`API call failed for ${endpoint}, using fallback storage:`, err.message);
+    clearTimeout(timeoutId);
+    console.warn(`API call failed for ${endpoint}:`, err.message);
     return null;
   }
 }

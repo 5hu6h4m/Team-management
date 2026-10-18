@@ -36,22 +36,30 @@ export function TaskCreateModal({ isOpen, onClose }) {
   const [attachmentName, setAttachmentName] = useState('');
   const [attachments, setAttachments] = useState([]);
 
-  // Filter candidates based on department (or all for President/GS)
   const isPresidentOrGS = currentUser?.role === 'President' || currentUser?.role === 'GS';
-  const candidates = users.filter(u => {
-    if (isPresidentOrGS) return true;
-    if (currentUser?.role === 'Lead') {
-      return u.department === currentUser.department || u.role === 'Member';
-    }
-    return true;
-  });
 
-  // Set default assignee if none chosen
+  // Build grouped candidate lists
+  const gsUsers = users.filter(u => u.role === 'GS' || u.role === 'General Secretary');
+  const leadUsers = users.filter(u => u.role === 'Lead' || u.role === 'Department Lead');
+  const memberUsers = users.filter(u =>
+    u.role !== 'President' && u.role !== 'GS' && u.role !== 'General Secretary' &&
+    u.role !== 'Lead' && u.role !== 'Department Lead'
+  );
+
+  // For Lead: only their dept members + leads
+  const candidates = isPresidentOrGS
+    ? users.filter(u => u.role !== 'President')
+    : currentUser?.role === 'Lead'
+      ? users.filter(u => u.department === currentUser.department && u.id !== currentUser.id)
+      : users.filter(u => u.id !== currentUser?.id);
+
+  // Set default assignee to GS if none chosen (for President)
   React.useEffect(() => {
-    if (isOpen && !assignedToId && candidates.length > 0) {
-      setAssignedToId(candidates[0].id);
+    if (isOpen && !assignedToId) {
+      const defaultUser = gsUsers[0] || candidates[0];
+      if (defaultUser) setAssignedToId(defaultUser.id);
     }
-  }, [isOpen, candidates, assignedToId]);
+  }, [isOpen, assignedToId]);
 
   const handleAddSubtask = (e) => {
     e.preventDefault();
@@ -200,15 +208,50 @@ export function TaskCreateModal({ isOpen, onClose }) {
               onChange={(e) => setAssignedToId(e.target.value)}
               className="w-full px-3.5 py-2.5 text-xs bg-white border border-indigo-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-semibold text-slate-900"
             >
-              {candidates.map((cand) => {
-                const activeCount = getUserActiveTaskCount(cand.id);
-                const workload = getWorkloadStatus(activeCount);
-                return (
-                  <option key={cand.id} value={cand.id}>
-                    {cand.name} ({cand.role} - {cand.department}) — [{workload.label}: {activeCount} active tasks]
-                  </option>
-                );
-              })}
+              {/* GS — Always at top */}
+              {gsUsers.length > 0 && isPresidentOrGS && (
+                <optgroup label="⭐ General Secretary">
+                  {gsUsers.map(u => {
+                    const activeCount = getUserActiveTaskCount(u.id);
+                    const workload = getWorkloadStatus(activeCount);
+                    return (
+                      <option key={u.id} value={u.id}>
+                        {u.name} (GS - {u.department}) — [{workload.label}: {activeCount} active]
+                      </option>
+                    );
+                  })}
+                </optgroup>
+              )}
+
+              {/* Department Leads */}
+              {leadUsers.filter(u => candidates.some(c => c.id === u.id)).length > 0 && (
+                <optgroup label="🏷 Department Leads">
+                  {leadUsers.filter(u => candidates.some(c => c.id === u.id)).map(u => {
+                    const activeCount = getUserActiveTaskCount(u.id);
+                    const workload = getWorkloadStatus(activeCount);
+                    return (
+                      <option key={u.id} value={u.id}>
+                        {u.name} (Lead - {u.department}) — [{workload.label}: {activeCount} active]
+                      </option>
+                    );
+                  })}
+                </optgroup>
+              )}
+
+              {/* Members */}
+              {memberUsers.filter(u => candidates.some(c => c.id === u.id)).length > 0 && (
+                <optgroup label="👤 Members">
+                  {memberUsers.filter(u => candidates.some(c => c.id === u.id)).map(u => {
+                    const activeCount = getUserActiveTaskCount(u.id);
+                    const workload = getWorkloadStatus(activeCount);
+                    return (
+                      <option key={u.id} value={u.id}>
+                        {u.name} (Member - {u.department}) — [{workload.label}: {activeCount} active]
+                      </option>
+                    );
+                  })}
+                </optgroup>
+              )}
             </select>
 
             <div className="flex items-center gap-4 mt-2 text-[11px] text-slate-600 flex-wrap">

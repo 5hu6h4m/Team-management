@@ -202,8 +202,7 @@ Every action is permanently recorded in the **Vertical Activity Timeline** on th
   - `+ Add Team Member`
   - `◌ Send Direct Message`
   - `⌁ View Overdue Tasks`
-  - `◎ View Available Members`
-
+  - `◎ View Available Members`333eesa
 ### B. Team Direct Messaging:
 - Navigate to **`Messages`** in the sidebar.
 - 1-on-1 direct chat with President, GS, Leads, and Members.

@@ -1,107 +1,54 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { loadFromStorage, saveToStorage } from '../utils/storage';
-import { INITIAL_USERS } from '../mock/seedData';
 import { api } from '../services/api';
 
 const AuthContext = createContext();
 
-const STORAGE_KEY = 'ecell_users_v7';
-
 export function AuthProvider({ children }) {
-  const [users, setUsers] = useState(() => {
-    const saved = loadFromStorage(STORAGE_KEY, []);
-    if (!saved || saved.length === 0) {
-      // Also check v6 or older keys
-      const oldV6 = loadFromStorage('ecell_users_v6', null);
-      if (oldV6 && Array.isArray(oldV6)) {
-        const existingIds = new Set(oldV6.map(u => u.id));
-        const missing = INITIAL_USERS.filter(u => !existingIds.has(u.id));
-        return [...oldV6, ...missing];
-      }
-      return INITIAL_USERS;
-    }
-    const existingIds = new Set(saved.map(u => u.id));
-    const missing = INITIAL_USERS.filter(u => !existingIds.has(u.id));
-    return [...saved, ...missing];
-  });
+  const [users, setUsers] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const [currentUser, setCurrentUser] = useState(() => {
-    const saved = localStorage.getItem('ecell_current_user_id');
-    if (saved) {
-      const found = users.find(u => u.id === saved);
-      return found || users[0] || null;
-    }
-    return users[0] || null;
-  });
-
-  // Keep storage synced
-  useEffect(() => {
-    saveToStorage(STORAGE_KEY, users);
-  }, [users]);
-
-  useEffect(() => {
-    if (currentUser) {
-      localStorage.setItem('ecell_current_user_id', currentUser.id);
-    } else {
-      localStorage.removeItem('ecell_current_user_id');
-    }
-  }, [currentUser]);
-
-  // Load from MongoDB backend if available
+  // On mount: load all users from MongoDB, then restore session
   useEffect(() => {
     api.getUsers().then(data => {
       if (data && Array.isArray(data) && data.length > 0) {
-        setUsers(prev => {
-          const existingIds = new Set(data.map(u => u.id));
-          const missing = prev.filter(u => !existingIds.has(u.id));
-          return [...data, ...missing];
-        });
-        if (currentUser) {
-          const updated = data.find(u => u.id === currentUser.id);
-          if (updated) setCurrentUser(updated);
+        setUsers(data);
+        // Restore logged-in session from sessionStorage
+        const savedId = sessionStorage.getItem('ecell_current_user_id');
+        if (savedId) {
+          const found = data.find(u => u.id === savedId);
+          if (found) setCurrentUser(found);
         }
       }
-    }).catch(() => {});
+    }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
-  // Standard secure login
-  const login = (email, enteredPassword) => {
-    if (!email || !email.trim()) {
-      return { success: false, message: 'Please enter your email.' };
+  // Persist session when user changes
+  useEffect(() => {
+    if (currentUser) {
+      sessionStorage.setItem('ecell_current_user_id', currentUser.id);
+    } else {
+      sessionStorage.removeItem('ecell_current_user_id');
     }
+  }, [currentUser]);
 
-    if (!enteredPassword || !enteredPassword.trim()) {
-      return { success: false, message: 'Please enter your password.' };
-    }
+  // Login
+  const login = (email, enteredPassword) => {
+    if (!email?.trim()) return { success: false, message: 'Please enter your email.' };
+    if (!enteredPassword?.trim()) return { success: false, message: 'Please enter your password.' };
 
     const query = email.trim().toLowerCase();
     const found = users.find(
-      u => u.email.toLowerCase() === query || 
-           u.name.toLowerCase() === query ||
-           u.id.toLowerCase() === query
+      u => u.email?.toLowerCase() === query ||
+           u.name?.toLowerCase() === query ||
+           u.id?.toLowerCase() === query
     );
 
-    if (!found) {
-      return { 
-        success: false, 
-        message: 'No account found with this email.' 
-      };
-    }
-
-    if (found.status === 'inactive') {
-      return { 
-        success: false, 
-        message: 'Your account has been deactivated.' 
-      };
-    }
+    if (!found) return { success: false, message: 'No account found with this email.' };
+    if (found.status === 'inactive') return { success: false, message: 'Your account has been deactivated.' };
 
     const expectedKey = found.accessKey || 'shubham8686@#';
-    if (expectedKey !== enteredPassword.trim()) {
-      return { 
-        success: false, 
-        message: 'Incorrect password.' 
-      };
-    }
+    if (expectedKey !== enteredPassword.trim()) return { success: false, message: 'Incorrect password.' };
 
     setCurrentUser(found);
     return { success: true, user: found };
@@ -109,11 +56,11 @@ export function AuthProvider({ children }) {
 
   const logout = () => {
     setCurrentUser(null);
-    localStorage.removeItem('ecell_current_user_id');
+    sessionStorage.removeItem('ecell_current_user_id');
   };
 
-  // Add Member (President only)
-  const addUser = (userData) => {
+  // Add Member — save to MongoDB
+  const addUser = async (userData) => {
     const defaultKey = userData.accessKey?.trim() || `${userData.name.toLowerCase().split(' ')[0]}123`;
     const newUser = {
       id: `u-${Date.now()}`,
@@ -131,22 +78,24 @@ export function AuthProvider({ children }) {
       joinedDate: new Date().toISOString().split('T')[0]
     };
 
-    setUsers(prev => [newUser, ...prev]);
-    api.createUser(newUser).catch(() => {});
-    return newUser;
+    // Save to backend first
+    const saved = await api.createUser(newUser).catch(() => null);
+    const userToAdd = saved || newUser;
+    setUsers(prev => [userToAdd, ...prev]);
+    return userToAdd;
   };
 
-  // Update Member
-  const updateUser = (userId, updates) => {
+  // Update Member — save to MongoDB
+  const updateUser = async (userId, updates) => {
     setUsers(prev => prev.map(u => u.id === userId ? { ...u, ...updates } : u));
     if (currentUser?.id === userId) {
       setCurrentUser(prev => ({ ...prev, ...updates }));
     }
-    api.updateUser(userId, updates).catch(() => {});
+    await api.updateUser(userId, updates).catch(() => {});
   };
 
-  // Toggle Active/Inactive status
-  const toggleUserStatus = (userId) => {
+  // Toggle Active/Inactive — save to MongoDB
+  const toggleUserStatus = async (userId) => {
     setUsers(prev => prev.map(u => {
       if (u.id === userId) {
         const nextStatus = u.status === 'active' ? 'inactive' : 'active';
@@ -154,7 +103,13 @@ export function AuthProvider({ children }) {
       }
       return u;
     }));
-    api.toggleUserStatus(userId).catch(() => {});
+    await api.toggleUserStatus(userId).catch(() => {});
+  };
+
+  // Refresh users from backend
+  const refreshUsers = async () => {
+    const data = await api.getUsers().catch(() => null);
+    if (data && Array.isArray(data)) setUsers(data);
   };
 
   return (
@@ -162,11 +117,13 @@ export function AuthProvider({ children }) {
       users,
       currentUser,
       setCurrentUser,
+      loading,
       login,
       logout,
       addUser,
       updateUser,
-      toggleUserStatus
+      toggleUserStatus,
+      refreshUsers
     }}>
       {children}
     </AuthContext.Provider>

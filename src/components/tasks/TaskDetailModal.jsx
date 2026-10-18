@@ -116,9 +116,9 @@ export function TaskDetailModal({ taskId, isOpen, onClose, onOpenSubmitModal }) 
       <div className="space-y-6">
         
         {/* Top Badges Bar */}
-        <div className="flex items-center justify-between gap-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-100 flex-wrap">
+        <div className="flex items-center justify-between gap-3 p-3.5 bg-[#141416] rounded-2xl border border-[#222226] flex-wrap">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="px-2.5 py-1 text-xs font-extrabold uppercase tracking-wider bg-white text-slate-800 rounded-lg border border-slate-200 shadow-2xs">
+            <span className="px-2.5 py-1 text-xs font-extrabold uppercase tracking-wider bg-[#1f1f23] text-zinc-200 rounded-lg border border-[#2c2c32] shadow-xs">
               {task.department}
             </span>
             <PriorityBadge priority={task.priority} />
@@ -129,33 +129,33 @@ export function TaskDetailModal({ taskId, isOpen, onClose, onOpenSubmitModal }) 
           <div className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold border ${deadlineInfo.bgClass}`}>
             <span className={`w-2 h-2 rounded-full ${deadlineInfo.dotClass}`}></span>
             <span>{deadlineInfo.label}</span>
-            <span className="text-slate-400 font-normal">({formatDeadline(task.deadline)})</span>
+            <span className="text-zinc-400 font-normal">({formatDeadline(task.deadline)})</span>
           </div>
         </div>
 
         {/* Verification Alert Banner if in Submitted state */}
         {task.status === 'SUBMITTED' && (
-          <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-50 to-indigo-50 border border-amber-200/80 shadow-xs">
+          <div className="p-4 rounded-2xl bg-[#1c1712] border border-amber-500/40 shadow-sm">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-amber-600 animate-bounce" />
-                <h4 className="text-xs font-bold uppercase tracking-wider text-amber-900">
+                <Sparkles className="w-5 h-5 text-amber-400 animate-bounce" />
+                <h4 className="text-xs font-bold uppercase tracking-wider text-amber-300">
                   Deliverable Awaiting Verification
                 </h4>
               </div>
-              <span className="text-[10px] text-amber-700 font-semibold bg-amber-100 px-2 py-0.5 rounded-full">
+              <span className="text-[10px] text-amber-300 font-semibold bg-amber-500/20 px-2 py-0.5 rounded-full border border-amber-500/30">
                 Submitted {formatTimeAgo(task.submittedAt)}
               </span>
             </div>
 
             {task.deliverableUrl && (
               <div className="mb-2">
-                <span className="text-xs text-slate-500 font-medium">Deliverable Link: </span>
+                <span className="text-xs text-zinc-400 font-medium">Deliverable Link: </span>
                 <a
                   href={task.deliverableUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-800 underline ml-1"
+                  className="inline-flex items-center gap-1 text-xs font-bold text-blue-400 hover:text-blue-300 underline ml-1"
                 >
                   <span>{task.deliverableUrl}</span>
                   <ExternalLink className="w-3.5 h-3.5" />
@@ -164,31 +164,31 @@ export function TaskDetailModal({ taskId, isOpen, onClose, onOpenSubmitModal }) 
             )}
 
             {task.submissionNotes && (
-              <p className="text-xs text-slate-700 bg-white/80 p-2.5 rounded-xl border border-amber-100 font-normal italic">
-                "{task.submissionNotes}"
+              <p className="text-xs text-zinc-200 bg-[#121214] p-2.5 rounded-xl border border-[#252528] font-normal italic">
+                &ldquo;{task.submissionNotes}&rdquo;
               </p>
             )}
 
             {/* Verification Controls for Lead/President */}
             {canVerify && (
-              <div className="mt-3 pt-3 border-t border-amber-200/60 space-y-2">
+              <div className="mt-3 pt-3 border-t border-amber-500/20 space-y-2">
                 <input
                   type="text"
                   placeholder="Optional review feedback or revision note..."
                   value={feedbackText}
                   onChange={(e) => setFeedbackText(e.target.value)}
-                  className="w-full px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                  className="w-full px-3 py-1.5 text-xs bg-[#141416] border border-[#2a2a30] text-white rounded-xl focus:outline-none focus:border-amber-500"
                 />
                 <div className="flex items-center justify-end gap-2">
                   <button
                     onClick={handleRequestRevision}
-                    className="px-3 py-1.5 text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition-colors"
+                    className="px-3 py-1.5 text-xs font-bold text-rose-400 bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/40 rounded-xl transition-colors"
                   >
                     Request Revision
                   </button>
                   <button
                     onClick={handleApprove}
-                    className="px-4 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-xs transition-all flex items-center gap-1.5"
+                    className="px-4 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl shadow-sm transition-all flex items-center gap-1.5"
                   >
                     <CheckCircle2 className="w-4 h-4" />
                     Approve & Mark Completed
@@ -207,10 +207,10 @@ export function TaskDetailModal({ taskId, isOpen, onClose, onOpenSubmitModal }) 
             
             {/* Description */}
             <div>
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1.5">
                 Description & Instructions
               </h4>
-              <div className="text-xs text-slate-700 leading-relaxed whitespace-pre-line bg-slate-50/70 p-3.5 rounded-2xl border border-slate-100 font-medium">
+              <div className="text-xs text-zinc-200 leading-relaxed whitespace-pre-line bg-[#141416] p-3.5 rounded-2xl border border-[#222226] font-normal">
                 {task.description || 'No detailed instructions added.'}
               </div>
             </div>
@@ -218,11 +218,11 @@ export function TaskDetailModal({ taskId, isOpen, onClose, onOpenSubmitModal }) 
             {/* Subtasks Checklist */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                  <CheckSquare className="w-4 h-4 text-indigo-600" />
+                <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+                  <CheckSquare className="w-4 h-4 text-blue-400" />
                   Subtasks & Deliverables Checklist
                 </h4>
-                <span className="text-[11px] text-slate-500 font-semibold">
+                <span className="text-[11px] text-zinc-400 font-semibold">
                   {(task.subtasks || []).filter(s => s.completed).length} of {(task.subtasks || []).length} completed
                 </span>
               </div>
@@ -233,15 +233,15 @@ export function TaskDetailModal({ taskId, isOpen, onClose, onOpenSubmitModal }) 
                     key={subtask.id}
                     className={`flex items-start gap-2.5 p-2.5 rounded-xl border transition-all cursor-pointer ${
                       subtask.completed 
-                        ? 'bg-slate-50/80 border-slate-200 text-slate-400 line-through' 
-                        : 'bg-white border-slate-200 text-slate-800 hover:border-indigo-200'
+                        ? 'bg-[#121214] border-[#1e1e22] text-zinc-500 line-through' 
+                        : 'bg-[#161618] border-[#252528] text-zinc-200 hover:border-blue-500/40'
                     }`}
                   >
                     <input
                       type="checkbox"
                       checked={subtask.completed}
                       onChange={() => toggleSubtask(task.id, subtask.id)}
-                      className="mt-0.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                      className="mt-0.5 rounded border-zinc-700 bg-zinc-900 text-blue-600 focus:ring-blue-500"
                     />
                     <span className="text-xs font-medium leading-tight select-none">
                       {subtask.title}
@@ -257,38 +257,38 @@ export function TaskDetailModal({ taskId, isOpen, onClose, onOpenSubmitModal }) 
                   placeholder="+ Add subtask checklist item..."
                   value={newSubtaskText}
                   onChange={(e) => setNewSubtaskText(e.target.value)}
-                  className="flex-1 px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  className="flex-1 px-3 py-1.5 text-xs bg-[#141416] border border-[#252528] rounded-xl text-white focus:outline-none focus:border-zinc-500"
                 />
                 <button
                   type="submit"
-                  className="px-3 py-1.5 text-xs font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-xl transition-colors"
+                  className="px-3 py-1.5 text-xs font-semibold bg-zinc-800 text-zinc-200 hover:bg-zinc-700 rounded-xl transition-colors"
                 >
                   Add
                 </button>
               </form>
             </div>
 
-            {/* Activity Timeline (Point 22 of PRD) */}
-            <div className="border-t border-slate-100 pt-4">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
+            {/* Activity Timeline */}
+            <div className="border-t border-[#222226] pt-4">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-3">
                 Audit Trail & Activity Timeline
               </h4>
-              <div className="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
+              <div className="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-[#252528]">
                 {(task.activityLog || []).map((log, idx) => {
                   const logUser = users.find(u => u.id === log.userId);
                   return (
                     <div key={log.id || idx} className="relative group">
-                      <span className="absolute -left-6 top-1 w-2.5 h-2.5 rounded-full bg-indigo-500 ring-4 ring-white" />
+                      <span className="absolute -left-6 top-1 w-2.5 h-2.5 rounded-full bg-blue-500 ring-4 ring-[#111111]" />
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <p className="text-xs font-medium text-slate-800">
+                          <p className="text-xs font-medium text-zinc-200">
                             {log.action}
                           </p>
-                          <p className="text-[10px] text-slate-400 mt-0.5">
+                          <p className="text-[10px] text-zinc-400 mt-0.5">
                             by {logUser ? logUser.name : 'System'} ({logUser?.role || 'Executive'})
                           </p>
                         </div>
-                        <span className="text-[10px] text-slate-400 shrink-0">
+                        <span className="text-[10px] text-zinc-400 shrink-0 font-mono">
                           {formatTimeAgo(log.timestamp)}
                         </span>
                       </div>
@@ -301,55 +301,55 @@ export function TaskDetailModal({ taskId, isOpen, onClose, onOpenSubmitModal }) 
           </div>
 
           {/* Right Column (1 Col): Meta, Assignee, Delegate, Actions */}
-          <div className="space-y-5 bg-slate-50/60 p-4 rounded-2xl border border-slate-100">
+          <div className="space-y-5 bg-[#141416] p-4 rounded-2xl border border-[#222226]">
             
             {/* Assignee Card */}
             <div>
-              <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block mb-1.5">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-zinc-400 block mb-1.5">
                 Current Assignee
               </span>
-              <div className="flex items-center gap-2.5 p-2 bg-white rounded-xl border border-slate-200">
+              <div className="flex items-center gap-2.5 p-2.5 bg-[#18181a] rounded-xl border border-[#252528]">
                 <Avatar user={assignee} size="sm" />
                 <div className="min-w-0">
-                  <p className="text-xs font-bold text-slate-900 truncate">{assignee?.name || 'Unassigned'}</p>
-                  <p className="text-[10px] text-slate-500">{assignee?.role} • {assignee?.department}</p>
+                  <p className="text-xs font-bold text-white truncate">{assignee?.name || 'Unassigned'}</p>
+                  <p className="text-[10px] text-zinc-400">{assignee?.role} • {assignee?.department}</p>
                 </div>
               </div>
             </div>
 
             {/* Created By Card */}
             <div>
-              <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block mb-1.5">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-zinc-400 block mb-1.5">
                 Assigned By
               </span>
-              <div className="flex items-center gap-2.5 p-2 bg-white rounded-xl border border-slate-200">
+              <div className="flex items-center gap-2.5 p-2.5 bg-[#18181a] rounded-xl border border-[#252528]">
                 <Avatar user={assignor} size="sm" />
                 <div className="min-w-0">
-                  <p className="text-xs font-bold text-slate-900 truncate">{assignor?.name || 'President'}</p>
-                  <p className="text-[10px] text-slate-500">{assignor?.role}</p>
+                  <p className="text-xs font-bold text-white truncate">{assignor?.name || 'President'}</p>
+                  <p className="text-[10px] text-zinc-400">{assignor?.role}</p>
                 </div>
               </div>
             </div>
 
             {/* Delegation Tool (GS / Lead / President) */}
             {canDelegate && (
-              <div className="pt-2 border-t border-slate-200">
+              <div className="pt-2 border-t border-[#222226]">
                 {!isDelegating ? (
                   <button
                     type="button"
                     onClick={() => setIsDelegating(true)}
-                    className="w-full py-1.5 px-3 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-xl border border-indigo-100 transition-colors flex items-center justify-center gap-1.5"
+                    className="w-full py-1.5 px-3 text-xs font-semibold text-zinc-200 bg-[#1e1e22] hover:bg-[#26262b] rounded-xl border border-[#2e2e34] transition-colors flex items-center justify-center gap-1.5"
                   >
                     <UserCheck className="w-3.5 h-3.5" />
                     <span>Delegate / Reassign Task</span>
                   </button>
                 ) : (
-                  <div className="p-3 bg-white rounded-xl border border-indigo-200 space-y-2 text-xs">
-                    <p className="font-bold text-indigo-950">Select New Assignee</p>
+                  <div className="p-3 bg-[#18181a] rounded-xl border border-[#2e2e34] space-y-2 text-xs">
+                    <p className="font-bold text-white">Select New Assignee</p>
                     <select
                       value={selectedDelegateeId}
                       onChange={(e) => setSelectedDelegateeId(e.target.value)}
-                      className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium"
+                      className="w-full p-2 bg-[#121214] border border-[#2a2a30] text-white rounded-lg text-xs font-medium"
                     >
                       <option value="">-- Choose Member --</option>
                       {users.map(u => (
@@ -363,19 +363,19 @@ export function TaskDetailModal({ taskId, isOpen, onClose, onOpenSubmitModal }) 
                       placeholder="Note for delegatee..."
                       value={delegateNote}
                       onChange={(e) => setDelegateNote(e.target.value)}
-                      className="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+                      className="w-full p-1.5 bg-[#121214] border border-[#2a2a30] text-white rounded-lg text-xs"
                     />
                     <div className="flex gap-2 justify-end">
                       <button
                         onClick={() => setIsDelegating(false)}
-                        className="px-2 py-1 text-slate-500 hover:bg-slate-100 rounded"
+                        className="px-2 py-1 text-zinc-400 hover:bg-zinc-800 rounded"
                       >
                         Cancel
                       </button>
                       <button
                         onClick={handleDelegateSubmit}
                         disabled={!selectedDelegateeId}
-                        className="px-3 py-1 bg-indigo-600 text-white font-bold rounded disabled:opacity-50"
+                        className="px-3 py-1 bg-[#B11226] hover:bg-[#D61F36] text-white font-bold rounded disabled:opacity-50"
                       >
                         Confirm Reassign
                       </button>
@@ -387,14 +387,14 @@ export function TaskDetailModal({ taskId, isOpen, onClose, onOpenSubmitModal }) 
 
             {/* Member Action: Submit for Review */}
             {isAssignedToMe && task.status !== 'COMPLETED' && (
-              <div className="pt-2 border-t border-slate-200">
+              <div className="pt-2 border-t border-[#222226]">
                 <button
                   type="button"
                   onClick={() => {
                     onClose();
                     onOpenSubmitModal && onOpenSubmitModal(task);
                   }}
-                  className="w-full py-2 px-3 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md shadow-indigo-500/20 transition-all flex items-center justify-center gap-1.5"
+                  className="w-full py-2 px-3 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5"
                 >
                   <Send className="w-3.5 h-3.5" />
                   <span>Submit Deliverable for Review</span>
@@ -404,7 +404,7 @@ export function TaskDetailModal({ taskId, isOpen, onClose, onOpenSubmitModal }) 
 
             {/* Delete button for President */}
             {isPresident && (
-              <div className="pt-2 border-t border-slate-200">
+              <div className="pt-2 border-t border-[#222226]">
                 <button
                   type="button"
                   onClick={() => {
@@ -413,7 +413,7 @@ export function TaskDetailModal({ taskId, isOpen, onClose, onOpenSubmitModal }) 
                       onClose();
                     }
                   }}
-                  className="w-full py-1.5 px-3 text-xs font-medium text-rose-600 hover:bg-rose-50 rounded-xl transition-colors flex items-center justify-center gap-1.5"
+                  className="w-full py-1.5 px-3 text-xs font-medium text-rose-400 hover:bg-rose-950/30 rounded-xl transition-colors flex items-center justify-center gap-1.5"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   <span>Delete Task</span>

@@ -1,18 +1,22 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { INITIAL_MESSAGES } from '../mock/seedData';
-import { loadFromStorage, saveToStorage } from '../utils/storage';
 import { useAuth } from './AuthContext';
+import { api } from '../services/api';
 
 const ChatContext = createContext();
 
 export function ChatProvider({ children }) {
   const { currentUser, users } = useAuth();
-  const [messages, setMessages] = useState(() => loadFromStorage('messages', INITIAL_MESSAGES));
+  const [messages, setMessages] = useState([]);
   const [activeContactId, setActiveContactId] = useState(null);
 
+  // Load messages from MongoDB on mount
   useEffect(() => {
-    saveToStorage('messages', messages);
-  }, [messages]);
+    api.getMessages().then(data => {
+      if (data && Array.isArray(data)) {
+        setMessages(data);
+      }
+    }).catch(() => {});
+  }, []);
 
   // If no contact selected, default to first available contact
   useEffect(() => {
@@ -24,8 +28,8 @@ export function ChatProvider({ children }) {
     }
   }, [currentUser, activeContactId, users]);
 
-  // Send direct message
-  const sendMessage = (receiverId, messageText) => {
+  // Send direct message — save to MongoDB
+  const sendMessage = async (receiverId, messageText) => {
     if (!currentUser || !messageText.trim()) return;
 
     const newMsg = {
@@ -38,6 +42,7 @@ export function ChatProvider({ children }) {
     };
 
     setMessages(prev => [...prev, newMsg]);
+    await api.sendMessage(newMsg).catch(() => {});
     return newMsg;
   };
 

@@ -19,17 +19,17 @@ export function Modal({ isOpen, onClose, title, subtitle, children, maxWidth = '
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto bg-black/80 backdrop-blur-xs animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto bg-black/80 backdrop-blur-xs">
       <div 
         className="fixed inset-0" 
         onClick={onClose} 
         aria-hidden="true" 
       />
       <div 
-        className={`relative w-full ${maxWidth} bg-[#111111] rounded-2xl border border-[#252525] shadow-2xl overflow-hidden z-10 my-8 transition-all animate-in zoom-in-95 duration-150`}
+        className={`relative w-full ${maxWidth} bg-[#111111] rounded-2xl border border-[#252525] shadow-2xl overflow-hidden z-10 my-8`}
       >
         {/* Header */}
-        <div className="flex items-start justify-between p-5 border-b border-[#252525] bg-[#151515]">
+        <div className="flex items-start justify-between p-4 sm:p-5 border-b border-[#252525] bg-[#151515]">
           <div>
             <h3 className="text-sm font-bold text-white uppercase tracking-wider">{title}</h3>
             {subtitle && <p className="text-xs text-zinc-400 mt-1 font-normal">{subtitle}</p>}
@@ -43,7 +43,7 @@ export function Modal({ isOpen, onClose, title, subtitle, children, maxWidth = '
         </div>
 
         {/* Content */}
-        <div className="p-5 max-h-[80vh] overflow-y-auto text-zinc-200">
+        <div className="p-4 sm:p-5 max-h-[80vh] overflow-y-auto text-zinc-200">
           {children}
         </div>
       </div>

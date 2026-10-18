@@ -7,10 +7,12 @@ import {
   Bell, 
   ChevronDown, 
   LogOut,
+  Menu,
+  X,
   UserCheck
 } from 'lucide-react';
 
-export function Navbar({ onOpenTaskDetail }) {
+export function Navbar({ onOpenTaskDetail, onToggleMobileMenu }) {
   const { currentUser, users, setCurrentUser, logout } = useAuth();
   const { unreadCount } = useNotifications();
 
@@ -34,37 +36,48 @@ export function Navbar({ onOpenTaskDetail }) {
 
   return (
     <header className="sticky top-0 z-40 bg-[#080808]/95 backdrop-blur-md border-b border-[#252525] h-14">
-      <div className="w-full px-4 sm:px-6 flex items-center justify-between h-full">
+      <div className="w-full px-3 sm:px-6 flex items-center justify-between h-full">
         
-        {/* Left: Minimal Brand Logo */}
-        <div className="flex items-center gap-2.5">
-          <span className="font-bold text-xs tracking-wider text-white uppercase">
-            E-CELL MET
-          </span>
-          <span className="text-zinc-600">/</span>
-          <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
-            TASKHUB
-          </span>
+        {/* Left: Mobile Hamburger Menu + Brand Logo */}
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          <button
+            type="button"
+            onClick={onToggleMobileMenu}
+            className="p-1.5 -ml-1 text-zinc-400 hover:text-white rounded-lg lg:hidden hover:bg-[#181818] transition-colors"
+            title="Open Navigation Menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-xs tracking-wider text-white uppercase">
+              E-CELL MET
+            </span>
+            <span className="text-zinc-600 hidden sm:inline">/</span>
+            <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider hidden sm:inline">
+              TASKHUB
+            </span>
+          </div>
         </div>
 
-        {/* Right Actions: Clean & Minimal (Role Switcher + Notifications + Profile) */}
-        <div className="flex items-center gap-3">
+        {/* Right Actions: Role Switcher + Notifications + Profile */}
+        <div className="flex items-center gap-2 sm:gap-3">
           
           {/* Quick Role Switcher */}
           <div className="relative" ref={roleSwitcherRef}>
             <button
               onClick={() => setIsRoleSwitcherOpen(!isRoleSwitcherOpen)}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs bg-[#141414] text-zinc-300 border border-[#252525] hover:border-zinc-700 transition-colors"
+              className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-lg text-xs bg-[#141414] text-zinc-300 border border-[#252525] hover:border-zinc-700 transition-colors max-w-[160px] sm:max-w-[220px]"
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
-              <span className="font-medium">
-                Role: <strong>{currentUser?.name}</strong> ({currentUser?.role})
+              <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0"></span>
+              <span className="font-medium truncate">
+                <span className="hidden sm:inline">Role: </span><strong>{currentUser?.name}</strong>
               </span>
-              <ChevronDown className="w-3 h-3 text-zinc-500" />
+              <ChevronDown className="w-3 h-3 text-zinc-500 shrink-0" />
             </button>
 
             {isRoleSwitcherOpen && (
-              <div className="absolute right-0 top-full mt-2 w-64 bg-[#111111] rounded-xl shadow-2xl border border-[#252525] py-2 z-50 animate-in fade-in zoom-in-95 duration-100">
+              <div className="absolute right-0 top-full mt-2 w-64 bg-[#111111] rounded-xl shadow-2xl border border-[#252525] py-2 z-50">
                 <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-500 border-b border-[#222226]">
                   Switch Active Role
                 </div>
@@ -101,50 +114,47 @@ export function Navbar({ onOpenTaskDetail }) {
             >
               <Bell className="w-4 h-4" />
               {unreadCount > 0 && (
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#D61F36] rounded-full ring-2 ring-[#080808]"></span>
               )}
             </button>
 
-            <NotificationDropdown
-              isOpen={isNotifOpen}
-              onClose={() => setIsNotifOpen(false)}
-              onSelectTask={onOpenTaskDetail}
-            />
+            {isNotifOpen && (
+              <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 z-50">
+                <NotificationDropdown
+                  onClose={() => setIsNotifOpen(false)}
+                  onOpenTaskDetail={onOpenTaskDetail}
+                />
+              </div>
+            )}
           </div>
 
-          {/* User Profile Menu */}
+          {/* User Profile / Logout Dropdown */}
           <div className="relative" ref={userMenuRef}>
             <button
               onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-              className="flex items-center gap-2 p-1 rounded-lg hover:bg-[#151515] transition-colors"
+              className="flex items-center gap-2 pl-1 sm:pl-2 rounded-lg hover:bg-[#151515] transition-colors"
             >
               <Avatar user={currentUser} size="xs" />
-              <span className="text-xs font-semibold text-zinc-200 hidden sm:inline">
+              <span className="text-xs font-semibold text-zinc-200 hidden md:inline">
                 {currentUser?.name}
               </span>
-              <ChevronDown className="w-3 h-3 text-zinc-500" />
+              <ChevronDown className="w-3 h-3 text-zinc-500 hidden sm:inline" />
             </button>
 
             {isUserMenuOpen && (
-              <div className="absolute right-0 top-full mt-2 w-52 bg-[#111111] rounded-xl shadow-2xl border border-[#252525] py-2 z-50 animate-in fade-in zoom-in-95 duration-100">
-                <div className="px-4 py-2 border-b border-[#222226]">
+              <div className="absolute right-0 top-full mt-2 w-48 bg-[#111111] rounded-xl shadow-2xl border border-[#252525] py-1 z-50">
+                <div className="px-3 py-2 border-b border-[#222226]">
                   <p className="text-xs font-bold text-white truncate">{currentUser?.name}</p>
-                  <p className="text-[10px] text-zinc-400 truncate">{currentUser?.email}</p>
-                  <p className="text-[10px] text-red-400 font-semibold mt-0.5">{currentUser?.role} • {currentUser?.department}</p>
+                  <p className="text-[10px] text-zinc-500 truncate">{currentUser?.email}</p>
                 </div>
 
-                <div className="pt-1">
-                  <button
-                    onClick={() => {
-                      logout();
-                      setIsUserMenuOpen(false);
-                    }}
-                    className="w-full flex items-center gap-2 px-4 py-2 text-xs text-red-400 hover:bg-[#181818] transition-colors font-semibold"
-                  >
-                    <LogOut className="w-3.5 h-3.5" />
-                    <span>Sign Out</span>
-                  </button>
-                </div>
+                <button
+                  onClick={logout}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-400 hover:bg-red-950/20 transition-colors"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>Sign Out</span>
+                </button>
               </div>
             )}
           </div>

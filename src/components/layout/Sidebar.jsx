@@ -1,6 +1,5 @@
 import React from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { useNotifications } from '../../context/NotificationContext';
 import { useTasks } from '../../context/TaskContext';
 import { 
   LayoutDashboard, 
@@ -11,10 +10,11 @@ import {
   MessageSquare, 
   BarChart3, 
   Settings, 
-  Plus
+  Plus,
+  X
 } from 'lucide-react';
 
-export function Sidebar({ activeTab, onNavigate, onOpenCreateTask }) {
+export function Sidebar({ activeTab, onNavigate, onOpenCreateTask, isMobileOpen, onCloseMobile }) {
   const { currentUser } = useAuth();
   const { tasks } = useTasks();
 
@@ -87,26 +87,45 @@ export function Sidebar({ activeTab, onNavigate, onOpenCreateTask }) {
     }
   ];
 
-  return (
-    <aside className="w-60 bg-[#0c0c0e] border-r border-[#252525] min-h-[calc(100vh-3.5rem)] flex flex-col justify-between p-3.5 shrink-0 select-none">
-      
+  const handleLinkClick = (tabKey) => {
+    onNavigate(tabKey);
+    if (onCloseMobile) onCloseMobile();
+  };
+
+  const sidebarContent = (
+    <div className="flex flex-col justify-between h-full p-3.5 select-none">
       <div className="space-y-5">
         
         {/* Sidebar Brand Header */}
-        <div className="px-3 pt-2 pb-1 border-b border-[#1e1e24]">
-          <h2 className="text-xs font-black tracking-widest text-white uppercase">
-            E-CELL MET
-          </h2>
-          <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
-            TASKHUB
-          </p>
+        <div className="px-3 pt-2 pb-1 border-b border-[#1e1e24] flex items-center justify-between">
+          <div>
+            <h2 className="text-xs font-black tracking-widest text-white uppercase">
+              E-CELL MET
+            </h2>
+            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
+              TASKHUB
+            </p>
+          </div>
+          
+          {/* Close button for Mobile Drawer */}
+          {isMobileOpen && (
+            <button
+              onClick={onCloseMobile}
+              className="p-1.5 text-zinc-400 hover:text-white rounded-lg lg:hidden"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
         {/* Primary Red CTA Button */}
         {!isMember && (
           <div>
             <button
-              onClick={onOpenCreateTask}
+              onClick={() => {
+                onOpenCreateTask();
+                if (onCloseMobile) onCloseMobile();
+              }}
               className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-[#B11226] hover:bg-[#D61F36] text-white text-xs font-bold rounded-lg shadow-sm transition-all transform active:scale-98"
             >
               <Plus className="w-4 h-4" />
@@ -145,7 +164,7 @@ export function Sidebar({ activeTab, onNavigate, onOpenCreateTask }) {
               return (
                 <button
                   key={item.id}
-                  onClick={() => onNavigate(targetKey)}
+                  onClick={() => handleLinkClick(targetKey)}
                   className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs transition-all ${
                     isActive
                       ? 'nav-item-active font-bold text-white'
@@ -173,7 +192,7 @@ export function Sidebar({ activeTab, onNavigate, onOpenCreateTask }) {
               return (
                 <button
                   key={item.id}
-                  onClick={() => onNavigate('admin')}
+                  onClick={() => handleLinkClick('admin')}
                   className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs transition-all ${
                     isActive
                       ? 'nav-item-active font-bold text-white'
@@ -204,7 +223,31 @@ export function Sidebar({ activeTab, onNavigate, onOpenCreateTask }) {
           </div>
         </div>
       </div>
+    </div>
+  );
 
-    </aside>
+  return (
+    <>
+      {/* 1. Desktop Persistent Sidebar */}
+      <aside className="hidden lg:flex w-60 bg-[#0c0c0e] border-r border-[#252525] min-h-[calc(100vh-3.5rem)] flex-col shrink-0">
+        {sidebarContent}
+      </aside>
+
+      {/* 2. Mobile Drawer Sidebar (with backdrop overlay) */}
+      {isMobileOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden flex">
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm transition-opacity"
+            onClick={onCloseMobile}
+          />
+          
+          {/* Slide-out Drawer */}
+          <div className="relative w-64 max-w-[80vw] bg-[#0c0c0e] border-r border-[#252525] h-full z-10 flex flex-col shadow-2xl animate-in slide-in-from-left duration-200">
+            {sidebarContent}
+          </div>
+        </div>
+      )}
+    </>
   );
 }

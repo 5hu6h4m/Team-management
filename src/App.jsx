@@ -23,11 +23,13 @@ import { MemberProfileModal } from './components/team/MemberProfileModal';
 import { CommandCenterModal } from './components/common/CommandCenterModal';
 
 function MainApp() {
-  const { currentUser } = useAuth();
+  const { currentUser, loading } = useAuth();
   const { setActiveContactId } = useChat();
+
 
   const [activeTab, setActiveTab] = useState('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Drawers and Modals state
   const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
@@ -69,10 +71,23 @@ function MainApp() {
     setActiveTab('messages');
   };
 
+  // Show loading spinner while fetching from MongoDB
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#080808] flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-10 h-10 border-2 border-[#B11226] border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-zinc-400 text-xs font-medium tracking-wider uppercase">Connecting to server...</p>
+        </div>
+      </div>
+    );
+  }
+
   // If user is not logged in, render the clean login screen
   if (!currentUser) {
     return <LoginPage />;
   }
+
 
   return (
     <div className="min-h-screen bg-[#080808] text-white flex flex-col antialiased selection:bg-red-500 selection:text-white">
@@ -83,19 +98,22 @@ function MainApp() {
         setSearchQuery={setSearchQuery}
         onNavigate={(tab) => setActiveTab(tab)}
         onOpenCommandCenter={() => setIsCommandCenterOpen(true)}
+        onToggleMobileMenu={() => setIsMobileMenuOpen(prev => !prev)}
       />
 
       {/* Main Layout */}
       <div className="flex-1 flex max-w-[1600px] w-full mx-auto">
-        {/* Clean Left Sidebar */}
+        {/* Responsive Left Sidebar */}
         <Sidebar
           activeTab={activeTab}
           onNavigate={(tab) => setActiveTab(tab)}
           onOpenCreateTask={() => setIsCreateTaskOpen(true)}
+          isMobileOpen={isMobileMenuOpen}
+          onCloseMobile={() => setIsMobileMenuOpen(false)}
         />
 
         {/* Content Viewport */}
-        <main className="flex-1 p-5 sm:p-7 min-w-0 overflow-y-auto max-h-[calc(100vh-3.5rem)]">
+        <main className="flex-1 p-3 sm:p-5 lg:p-7 min-w-0 overflow-y-auto max-h-[calc(100vh-3.5rem)]">
           {activeTab === 'dashboard' && (
             <DashboardPage
               onOpenCreateTask={() => setIsCreateTaskOpen(true)}
@@ -104,15 +122,6 @@ function MainApp() {
               onVerifyClick={handleVerifyTaskClick}
               onSelectUser={handleSelectUser}
               onNavigate={(tab) => setActiveTab(tab)}
-            />
-          )}
-
-          {activeTab === 'tasks' && (
-            <AllTasksPage
-              onOpenCreateTask={() => setIsCreateTaskOpen(true)}
-              onOpenTaskDetail={handleOpenTaskDetail}
-              onSubmitClick={handleSubmitTaskClick}
-              onVerifyClick={handleVerifyTaskClick}
             />
           )}
 
@@ -131,7 +140,18 @@ function MainApp() {
             />
           )}
 
-          {activeTab === 'messages' && <MessagesPage />}
+          {activeTab === 'tasks' && (
+            <AllTasksPage
+              onOpenTaskDetail={handleOpenTaskDetail}
+              onOpenCreateTask={() => setIsCreateTaskOpen(true)}
+              onSubmitClick={handleSubmitTaskClick}
+              onVerifyClick={handleVerifyTaskClick}
+            />
+          )}
+
+          {activeTab === 'messages' && (
+            <MessagesPage />
+          )}
 
           {activeTab === 'admin' && (
             <AdminPanelPage
@@ -139,11 +159,13 @@ function MainApp() {
             />
           )}
 
-          {activeTab === 'analytics' && <AnalyticsPage />}
+          {activeTab === 'analytics' && (
+            <AnalyticsPage />
+          )}
         </main>
       </div>
 
-      {/* Slide-over Drawers */}
+      {/* Persistent Modals & Drawers */}
       <TaskCreateDrawer
         isOpen={isCreateTaskOpen}
         onClose={() => setIsCreateTaskOpen(false)}
@@ -151,12 +173,10 @@ function MainApp() {
 
       <TaskDetailDrawer
         taskId={activeDetailTaskId}
-        isOpen={Boolean(activeDetailTaskId)}
         onClose={() => setActiveDetailTaskId(null)}
         onSubmitClick={handleSubmitTaskClick}
       />
 
-      {/* Action Modals */}
       <TaskSubmissionModal
         task={submissionTask}
         isOpen={Boolean(submissionTask)}
@@ -176,14 +196,12 @@ function MainApp() {
         onClose={() => setIsCommandCenterOpen(false)}
         onNavigate={(tab) => setActiveTab(tab)}
         onOpenCreateTask={() => setIsCreateTaskOpen(true)}
-        onOpenTaskDetail={handleOpenTaskDetail}
-        onSelectUser={handleSelectUser}
       />
     </div>
   );
 }
 
-export function App() {
+export default function App() {
   return (
     <AuthProvider>
       <TaskProvider>
@@ -196,5 +214,3 @@ export function App() {
     </AuthProvider>
   );
 }
-
-export default App;
