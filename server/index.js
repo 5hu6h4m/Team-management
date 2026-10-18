@@ -114,7 +114,13 @@ import { Department } from './models/Department.js';
 import { Notification } from './models/Notification.js';
 import { Message } from './models/Message.js';
 
-const mongoDB = { User, Task, Department, Notification, Message };
+const mongoDB = {
+  users: User,
+  tasks: Task,
+  departments: Department,
+  notifications: Notification,
+  messages: Message
+};
 
 // Helper to get the right DB
 const db = () => useMongoDB ? mongoDB : memoryDB;
